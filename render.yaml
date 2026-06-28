@@ -1,0 +1,49 @@
+# ══════════════════════════════════════════════════════════════
+#  UGC Mestre CRM — Render Deploy Configuration
+#  Documentação: https://render.com/docs/render-yaml-spec
+# ══════════════════════════════════════════════════════════════
+
+services:
+  # ── CRM Frontend (Site Estático) ─────────────────────────────
+  - type: web
+    name: ugc-mestre-crm
+    runtime: static
+
+    # Diretório raiz do projeto (a raiz já contém o index.html)
+    staticPublishPath: .
+
+    # Sem etapa de build — o CRM é HTML/CSS/JS puro
+    buildCommand: ""
+
+    # Cabeçalhos de segurança e PWA
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      # Cache longo para o service worker ser detectado corretamente
+      - path: /service-worker.js
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+      - path: /manifest.json
+        name: Cache-Control
+        value: no-cache
+
+    # Rotas — qualquer rota desconhecida serve o index.html (SPA behavior)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    # Variáveis de ambiente (preencha no painel da Render ou via .env)
+    envVars:
+      - key: NODE_ENV
+        value: production

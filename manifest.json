@@ -1,0 +1,43 @@
+{
+  "name": "UGC Mestre — CRM",
+  "short_name": "UGC Mestre",
+  "description": "CRM de prospecção e gestão de campanhas UGC da Isis",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F5F0E8",
+  "theme_color": "#B8A5E8",
+  "lang": "pt-BR",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Prospecção",
+      "short_name": "Prospecção",
+      "description": "Abrir aba de leads em prospecção",
+      "url": "./index.html#prospeccao",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Pré-Lista",
+      "short_name": "Pré-Lista",
+      "description": "Abrir a pré-lista de leads",
+      "url": "./index.html#prelista",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    }
+  ]
+}

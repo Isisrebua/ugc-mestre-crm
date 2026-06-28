@@ -1,0 +1,12 @@
+# Variáveis de ambiente reais — NUNCA comitar
+.env
+.env.local
+.env.production
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/settings.json
+*.swp

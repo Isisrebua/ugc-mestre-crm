@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#F5F0E8"/>
+  <rect x="60" y="100" width="392" height="312" rx="20" fill="#E8E0D5"/>
+  <rect x="80" y="120" width="352" height="272" rx="12" fill="#FFFFFF" opacity=".7"/>
+  <!-- Barras de dados estilizadas -->
+  <rect x="110" y="290" width="50" height="80" rx="8" fill="#B8A5E8"/>
+  <rect x="180" y="240" width="50" height="130" rx="8" fill="#A8D8C8"/>
+  <rect x="250" y="200" width="50" height="170" rx="8" fill="#F5C5D0"/>
+  <rect x="320" y="160" width="50" height="210" rx="8" fill="#B8D8F0"/>
+  <!-- Linha de tendência -->
+  <polyline points="135,280 205,230 275,188 345,148" fill="none" stroke="#8B6FBE" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Pontos na linha -->
+  <circle cx="135" cy="280" r="8" fill="#8B6FBE"/>
+  <circle cx="205" cy="230" r="8" fill="#8B6FBE"/>
+  <circle cx="275" cy="188" r="8" fill="#8B6FBE"/>
+  <circle cx="345" cy="148" r="8" fill="#8B6FBE"/>
+  <!-- Emoji pincel no canto -->
+  <text x="340" y="98" font-size="90" font-family="serif">🎨</text>
+</svg>
