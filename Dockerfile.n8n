@@ -1,22 +1,16 @@
 # ══════════════════════════════════════════════════════════════
-#  n8n — Imagem oficial, ajustada para o Web Service da Render
-#  Não edite este arquivo manualmente.
-#  Todas as configs ficam nas variáveis de ambiente do render.yaml.
+#  n8n — Render Web Service (Docker)
+#  A Render injeta $PORT em runtime; o CMD shell-form expande
+#  a variável DEPOIS que o container sobe, garantindo que o n8n
+#  escute exatamente na porta que a Render espera.
 # ══════════════════════════════════════════════════════════════
 FROM n8nio/n8n:latest
 
 USER root
 
-# Aceita o certificado SSL do PostgreSQL gerenciado da Render
+# Aceita SSL do PostgreSQL interno da Render
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
-# A Render injeta a porta real em $PORT em tempo de execução e exige
-# que o processo escute nela — não dá pra fixar isso em build time.
-# Este entrypoint repassa $PORT (com fallback 5678) para N8N_PORT
-# antes de iniciar o n8n.
-RUN printf '#!/bin/sh\nexport N8N_PORT="${PORT:-5678}"\nexport N8N_LISTEN_ADDRESS=0.0.0.0\nexec n8n start\n' > /docker-entrypoint-render.sh \
-    && chmod +x /docker-entrypoint-render.sh
-
-EXPOSE 5678
-
-ENTRYPOINT ["/docker-entrypoint-render.sh"]
+# CMD em shell-form: o sh é invocado em runtime (quando $PORT já existe)
+# ENTRYPOINT exec-form não expande variáveis — por isso não usamos aqui.
+CMD sh -c "export N8N_PORT=${PORT:-5678} && export N8N_LISTEN_ADDRESS=0.0.0.0 && n8n start"
