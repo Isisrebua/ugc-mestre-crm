@@ -51,8 +51,10 @@ services:
       - key: DB_TYPE
         value: postgresdb
 
+      # URL interna da Render (mesmo workspace) — sem latência, sem firewall.
+      # A URL externa (.virginia-postgres.render.com) causava timeout.
       - key: DB_POSTGRESDB_HOST
-        value: dpg-d907lbj7uimc73958150-a.virginia-postgres.render.com
+        value: dpg-d907lbj7uimc73958150-a.internal
 
       - key: DB_POSTGRESDB_PORT
         value: "5432"
@@ -67,8 +69,9 @@ services:
       - key: DB_POSTGRESDB_PASSWORD
         sync: false
 
+      # Conexão interna da Render não usa SSL — desabilitar evita erro de handshake
       - key: DB_POSTGRESDB_SSL_ENABLED
-        value: "true"
+        value: "false"
 
       - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
         value: "false"
