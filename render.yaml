@@ -1,21 +1,17 @@
 # ══════════════════════════════════════════════════════════════
-#  UGC Mestre CRM — Render Deploy Configuration
+#  UGC Mestre — Render Blueprint
+#  Dois serviços: CRM (site estático) + n8n (automação/agentes)
 #  Documentação: https://render.com/docs/render-yaml-spec
 # ══════════════════════════════════════════════════════════════
 
 services:
-  # ── CRM Frontend (Site Estático) ─────────────────────────────
+
+  # ── 1. CRM Frontend (Static Site) ─────────────────────────────
   - type: web
     name: ugc-mestre-crm
     runtime: static
-
-    # Diretório raiz do projeto (a raiz já contém o index.html)
     staticPublishPath: .
-
-    # Sem etapa de build — o CRM é HTML/CSS/JS puro
     buildCommand: ""
-
-    # Cabeçalhos de segurança e PWA
     headers:
       - path: /*
         name: X-Frame-Options
@@ -26,24 +22,103 @@ services:
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
-      - path: /*
-        name: Permissions-Policy
-        value: camera=(), microphone=(), geolocation=()
-      # Cache longo para o service worker ser detectado corretamente
       - path: /service-worker.js
         name: Cache-Control
         value: no-cache, no-store, must-revalidate
       - path: /manifest.json
         name: Cache-Control
         value: no-cache
-
-    # Rotas — qualquer rota desconhecida serve o index.html (SPA behavior)
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
-
-    # Variáveis de ambiente (preencha no painel da Render ou via .env)
     envVars:
       - key: NODE_ENV
         value: production
+
+  # ── 2. n8n — Automação e Agentes ──────────────────────────────
+  - type: web
+    name: n8n-ugc-mestre
+    runtime: docker
+    dockerfilePath: ./Dockerfile.n8n
+    plan: free
+
+    # Render detecta a porta automaticamente via PORT, mas n8n usa 5678
+    # Definimos explicitamente para garantir
+    envVars:
+
+      # ── Banco de dados (PostgreSQL da Render) ──────────────────
+      - key: DB_TYPE
+        value: postgresdb
+
+      - key: DB_POSTGRESDB_HOST
+        value: dpg-d907lbj7uimc73958150-a.virginia-postgres.render.com
+
+      - key: DB_POSTGRESDB_PORT
+        value: "5432"
+
+      - key: DB_POSTGRESDB_DATABASE
+        value: crm_db_qmsr
+
+      - key: DB_POSTGRESDB_USER
+        value: isis_admin
+
+      # SENHA — preencher manualmente no painel Render (Settings → Environment)
+      - key: DB_POSTGRESDB_PASSWORD
+        sync: false
+
+      - key: DB_POSTGRESDB_SSL_ENABLED
+        value: "true"
+
+      - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
+
+      # ── Configuração do n8n ────────────────────────────────────
+      - key: N8N_PORT
+        value: "5678"
+
+      - key: N8N_PROTOCOL
+        value: https
+
+      # URL pública do n8n (atualizar após o primeiro deploy)
+      - key: N8N_HOST
+        value: n8n-ugc-mestre.onrender.com
+
+      - key: WEBHOOK_URL
+        value: https://n8n-ugc-mestre.onrender.com/
+
+      # ── Segurança ──────────────────────────────────────────────
+      # Chave de criptografia — gere uma string aleatória de 32+ chars
+      # ex: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      - key: N8N_ENCRYPTION_KEY
+        sync: false
+
+      # Login de acesso ao painel n8n
+      - key: N8N_BASIC_AUTH_ACTIVE
+        value: "true"
+
+      - key: N8N_BASIC_AUTH_USER
+        value: isis
+
+      # Senha do painel n8n — definir no painel Render
+      - key: N8N_BASIC_AUTH_PASSWORD
+        sync: false
+
+      # ── Performance / Limites ──────────────────────────────────
+      # Evita uso de disco (Render free não tem disco persistente)
+      - key: N8N_BINARY_DATA_MODE
+        value: default
+
+      # Fuso horário dos agendamentos
+      - key: GENERIC_TIMEZONE
+        value: America/Sao_Paulo
+
+      - key: TZ
+        value: America/Sao_Paulo
+
+      # Desativa telemetria
+      - key: N8N_DIAGNOSTICS_ENABLED
+        value: "false"
+
+      - key: N8N_VERSION_NOTIFICATIONS_ENABLED
+        value: "false"
