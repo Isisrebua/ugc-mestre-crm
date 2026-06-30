@@ -74,8 +74,10 @@ services:
         value: "false"
 
       # ── Configuração do n8n ────────────────────────────────────
-      - key: N8N_PORT
-        value: "5678"
+      # N8N_PORT NÃO é fixado aqui — o entrypoint do Dockerfile.n8n
+      # lê a variável $PORT que a própria Render injeta em runtime
+      # e repassa para o n8n. Fixar a porta aqui é o que causava o
+      # erro de deploy (a Render espera o processo na porta dela).
 
       - key: N8N_PROTOCOL
         value: https

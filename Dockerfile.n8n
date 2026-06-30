@@ -1,15 +1,22 @@
 # ══════════════════════════════════════════════════════════════
-#  n8n — Imagem oficial com SSL habilitado para Render
+#  n8n — Imagem oficial, ajustada para o Web Service da Render
 #  Não edite este arquivo manualmente.
 #  Todas as configs ficam nas variáveis de ambiente do render.yaml.
 # ══════════════════════════════════════════════════════════════
 FROM n8nio/n8n:latest
 
-# Garante que o container rode como root para permissões no Render
 USER root
 
-# Variável de ambiente para aceitar SSL do PostgreSQL da Render
+# Aceita o certificado SSL do PostgreSQL gerenciado da Render
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
-# Porta padrão do n8n
+# A Render injeta a porta real em $PORT em tempo de execução e exige
+# que o processo escute nela — não dá pra fixar isso em build time.
+# Este entrypoint repassa $PORT (com fallback 5678) para N8N_PORT
+# antes de iniciar o n8n.
+RUN printf '#!/bin/sh\nexport N8N_PORT="${PORT:-5678}"\nexport N8N_LISTEN_ADDRESS=0.0.0.0\nexec n8n start\n' > /docker-entrypoint-render.sh \
+    && chmod +x /docker-entrypoint-render.sh
+
 EXPOSE 5678
+
+ENTRYPOINT ["/docker-entrypoint-render.sh"]
