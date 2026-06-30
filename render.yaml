@@ -39,20 +39,22 @@ services:
   # ── 2. n8n — Automação e Agentes ──────────────────────────────
   - type: web
     name: n8n-ugc-mestre
-    runtime: docker
-    dockerfilePath: ./Dockerfile.n8n
+    runtime: image
+    image:
+      url: docker.io/n8nio/n8n:latest
     plan: free
 
-    # Render detecta a porta automaticamente via PORT, mas n8n usa 5678
-    # Definimos explicitamente para garantir
     envVars:
 
-      # ── Banco de dados (PostgreSQL da Render) ──────────────────
+      # ── Porta ─────────────────────────────────────────────────
+      # A Render expande $PORT antes de passar para o container.
+      - key: N8N_PORT
+        value: $PORT
+
+      # ── Banco de dados (PostgreSQL interno da Render) ──────────
       - key: DB_TYPE
         value: postgresdb
 
-      # URL interna da Render (mesmo workspace) — sem latência, sem firewall.
-      # A URL externa (.virginia-postgres.render.com) causava timeout.
       - key: DB_POSTGRESDB_HOST
         value: dpg-d907lbj7uimc73958150-a.internal
 
@@ -65,11 +67,9 @@ services:
       - key: DB_POSTGRESDB_USER
         value: isis_admin
 
-      # SENHA — preencher manualmente no painel Render (Settings → Environment)
       - key: DB_POSTGRESDB_PASSWORD
         sync: false
 
-      # Conexão interna da Render não usa SSL — desabilitar evita erro de handshake
       - key: DB_POSTGRESDB_SSL_ENABLED
         value: "false"
 
@@ -77,11 +77,6 @@ services:
         value: "false"
 
       # ── Configuração do n8n ────────────────────────────────────
-      # N8N_PORT NÃO é fixado aqui — o entrypoint do Dockerfile.n8n
-      # lê a variável $PORT que a própria Render injeta em runtime
-      # e repassa para o n8n. Fixar a porta aqui é o que causava o
-      # erro de deploy (a Render espera o processo na porta dela).
-
       - key: N8N_PROTOCOL
         value: https
 
