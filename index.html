@@ -1125,6 +1125,29 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
   }
   /* ── Agentes + Aprovações: empilhados ── */
   .vg-agents-aprov-grid{grid-template-columns:1fr!important}
+
+  /* ── LWS Overlay 3 colunas → empilhado ── */
+  #lws-cols{flex-direction:column!important;overflow-y:auto!important;overflow-x:hidden!important}
+  #lws-cols>div{width:100%!important;flex-shrink:0!important;border-right:none!important;border-bottom:2px solid var(--cream-dd);max-height:none!important;height:auto!important}
+  #lws-cols>div:last-child{border-bottom:none}
+
+  /* ── Detail panel lateral → full-width overlay ── */
+  .detail-wrap.open{width:100vw!important;position:fixed;inset:0;z-index:400;height:100dvh!important}
+  .detail-inner{width:100vw!important}
+
+  /* ── Agenda: esconder calendário lateral, expandir conteúdo ── */
+  .agenda-cal-col{display:none!important}
+  .agenda-main-col{padding:12px 14px}
+
+  /* ── Pre-Lista: esconder calendário lateral ── */
+  .pl-cal-col{display:none!important}
+
+  /* ── PL Modal: largura total ── */
+  .pl-modal{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;padding:16px 14px!important}
+  .pl-modal-body-grid{grid-template-columns:1fr!important}
+
+  /* ── Raio-X stats 2 colunas → 1 ── */
+  .raiox-stats-grid{grid-template-columns:1fr!important}
 }
 </style>
 <link rel="manifest" href="manifest.json">
@@ -1508,7 +1531,7 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
         <div id="lws-head-actions" style="display:flex;gap:6px"></div>
       </div>
       <!-- 3-col workspace -->
-      <div style="flex:1;display:flex;overflow:hidden">
+      <div id="lws-cols" style="flex:1;display:flex;overflow:hidden">
 
         <!-- COL A: Raio-X + Histórico + Central de Inteligência (40%) -->
         <div style="width:40%;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;border-right:2px solid var(--cream-dd)">
@@ -1796,7 +1819,7 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
     <div class="pl-modal-head" id="pl-modal-head"></div>
 
     <!-- Corpo 2 colunas: Raio-X | Instrução -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
+    <div class="pl-modal-body-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
 
       <!-- Coluna esquerda: Raio-X estruturado -->
       <div>
@@ -4164,7 +4187,7 @@ function renderProspRaiox(leadId, targetId = 'prosp-col2-body') {
           </div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+      <div class="raiox-stats-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
         ${l.seguidores?`<div class="raiox-row"><span class="raiox-key">Seguidores</span>${l.seguidores}</div>`:''}
         ${l.engajamento?`<div class="raiox-row"><span class="raiox-key">Engajamento</span>${l.engajamento}</div>`:''}
         ${l.capital?`<div class="raiox-row"><span class="raiox-key">Capital</span>${l.capital}</div>`:''}
