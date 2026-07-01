@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
@@ -1768,289 +1768,28 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
    Leads_Geral | Contatos_Evolutivos | Diario_Cadencia_Personalizado
 ═══════════════════════════════════════════ */
 
-let Leads_Geral = [
-  { id:1, nome:'Glow Beauty', seg:'Cosméticos Naturais', site:'glowbeauty.com.br', insta:'@glowbeautybr',
-    pot:'alto', capital:'R$ 1M–3M/ano', just:'Marca consolidada com 180k seguidores. Produto com ticket R$120 e margem alta. Investe em macro-influencers sem UGC autêntico.',
-    garg:'Todo conteúdo é de estúdio. Comentários pedem resenhas reais mas a marca não entrega.',
-    insight:'UGC autentico aumentaria CR do site delas de 2,3% para pelo menos 4%.',
-    contatos:[{tipo:'agent',tag:'Agente 1',val:'marketing@glowbeauty.com.br'},{tipo:'wpp',tag:'WhatsApp Direto',val:'(11) 98765-4321'},{tipo:'td',tag:'Tomador de Decisão',val:'Camila Rocha – CEO'},{tipo:'mgmt',tag:'Ger. Marketing',val:'Lucas Ferreira'}],
-    stage:'prospeccao', tabs:['prospeccao','interessados','banco'], statusFlags:['em_conversa','interessada'],
-    proximaAcao:'2026-06-25', dataCaptacao:'2026-06-10',
-    canal:'instagram', valor:'R$ 4.500', agent:'at', tags:['Beleza','Produto físico'],
-    agentNote:'Agente Atendente monitorando DMs — aguardando resposta na etapa 3' },
-
-  { id:2, nome:'SportsMax', seg:'Suplementos & Fitness', site:'sportsmax.com.br', insta:'@sportsmaxbr',
-    pot:'alto', capital:'R$ 5M+/ano', just:'E-commerce com 200k seguidores. Tráfego pago intenso. CAC alto por falta de UGC real.',
-    garg:'Conteúdo muito técnico e distante. Usuários querem transformação real.',
-    insight:'UGC de transformação 30 dias reduziria CAC em 30% e aumentaria ROAS em 2.4x.',
-    contatos:[{tipo:'email',tag:'E-mail Verificado',val:'parcerias@sportsmax.com.br'},{tipo:'td',tag:'Tomador de Decisão',val:'Roberto Nunes – CMO'},{tipo:'agent',tag:'Agente 1',val:'roberto@sportsmax.com.br'}],
-    stage:'aprovacao', tabs:['aprovacao','banco'], statusFlags:[],
-    proximaAcao:'2026-06-24', dataCaptacao:'2026-06-08',
-    canal:'email', valor:'R$ 8.000', agent:'a2', tags:['Fitness','E-commerce'],
-    agentNote:'Agente 2 finalizou cadência de 5 etapas — aguardando aprovação Isis' },
-
-  { id:3, nome:'TastyChef', seg:'Culinária & Utensílios', site:'tastychef.com.br', insta:'@tastychef',
-    pot:'medio', capital:'R$ 500k–1M/ano', just:'Marca em crescimento com produto visual atraente. Budget moderado.',
-    garg:'Falta tutoriais de uso. Conteúdo focado em produto, pouco em experiência.',
-    insight:'UGC culinário é viral. Receitas com produtos deles gerariam engajamento massivo.',
-    contatos:[{tipo:'wpp',tag:'WhatsApp Direto',val:'(21) 97654-3210'},{tipo:'mgmt',tag:'Ger. Marketing',val:'Fernanda Costa'},{tipo:'agent',tag:'Agente 1',val:'fale@tastychef.com.br'}],
-    stage:'standby', tabs:['standby','banco'], statusFlags:[],
-    proximaAcao:'2026-07-10', dataCaptacao:'2026-06-12',
-    canal:'whatsapp', valor:'R$ 2.200', agent:'isis', tags:['Food','Produto visual'],
-    retomarContato:'2026-07-10',
-    agentNote:'Isis pausou fluxo — aguardando verba do cliente em julho' },
-
-  { id:4, nome:'FashionBR', seg:'Moda & Lifestyle', site:'fashionbr.com.br', insta:'@fashionbr',
-    pot:'alto', capital:'R$ 2M–8M/ano', just:'350k seguidores, e-commerce robusto. Oportunidade clara em UGC diverso.',
-    garg:'Feed muito curado. Comentários pedem diversidade de corpos e estilos.',
-    insight:'UGC diverso poderia dobrar engajamento e reduzir CAC em 30%.',
-    contatos:[{tipo:'td',tag:'Tomador de Decisão',val:'Larissa Duarte – Fundadora'},{tipo:'email',tag:'E-mail Verificado',val:'collab@fashionbr.com.br'},{tipo:'wpp',tag:'WhatsApp Direto',val:'(11) 99111-2222'}],
-    stage:'isis', tabs:['prospeccao','interessados','isis','banco'], statusFlags:['interessada','em_conversa'],
-    proximaAcao:'2026-06-25', dataCaptacao:'2026-06-05',
-    canal:'whatsapp', valor:'R$ 12.000', agent:'isis', tags:['Moda','Alto ticket'],
-    agentNote:'👑 Isis em negociação direta — reunião agendada 25/06' },
-
-  { id:5, nome:'ZenLife', seg:'Saúde Mental & Wellness', site:'zenlife.com.br', insta:'@zenlifebr',
-    pot:'medio', capital:'R$ 300k–800k/ano', just:'Nicho em crescimento. Produto digital + físico com audiência engajada.',
-    garg:'Conteúdo institucional demais. Falta depoimento humano e emocional.',
-    insight:'UGC emocional de transformação pessoal é o que wellness precisa para converter.',
-    contatos:[{tipo:'email',tag:'E-mail Verificado',val:'hello@zenlife.com.br'},{tipo:'agent',tag:'Agente 1',val:'bianca@zenlife.com.br'}],
-    stage:'remarketing', tabs:['remarketing','banco'], statusFlags:[],
-    proximaAcao:'2026-06-28', dataCaptacao:'2026-06-01',
-    canal:'email', valor:'R$ 3.000', agent:'a1', tags:['Wellness','Digital'],
-    agentNote:'Agente 1 buscando novo ângulo de reengajamento' },
-
-  { id:6, nome:'PixelGame', seg:'Games & Entretenimento', site:'pixelgame.com.br', insta:'@pixelgamebr',
-    pot:'alto', capital:'R$ 3M+/ano', just:'Publisher mobile com audiência jovem massiva. CAC alto sem UGC orgânico.',
-    garg:'Todo conteúdo é gráfico. Falta criador real jogando e reagindo.',
-    insight:'UGC de gameplay reaction reduz CPM em até 40% em campanhas de games.',
-    contatos:[{tipo:'td',tag:'Tomador de Decisão',val:'Thiago Nunes – CEO'},{tipo:'email',tag:'E-mail Verificado',val:'growth@pixelgame.com.br'},{tipo:'wpp',tag:'WhatsApp Direto',val:'(11) 98888-0001'}],
-    stage:'prospeccao', tabs:['prospeccao','interessados','banco'], statusFlags:['em_conversa'],
-    proximaAcao:'2026-06-24', dataCaptacao:'2026-06-15',
-    canal:'instagram', valor:'R$ 15.000', agent:'at', tags:['Games','Alto budget'],
-    agentNote:'Agente Atendente: Thiago respondeu! Resposta IA aguardando aprovação Isis' },
-
-  { id:7, nome:'NaturePharma', seg:'Suplementos Naturais', site:'naturepharma.com.br', insta:'@naturepharmabr',
-    pot:'medio', capital:'R$ 800k–2M/ano', just:'Marca de suplementos naturais com claim científico forte e público fiel.',
-    garg:'Comunicação muito técnica. Público-alvo não conecta com a linguagem atual.',
-    insight:'UGC de resultado real com linguagem simples convertiria muito mais. CAC potencialmente reduzido em 25%.',
-    contatos:[{tipo:'email',tag:'E-mail Verificado',val:'mkt@naturepharma.com.br'},{tipo:'agent',tag:'Agente 1',val:'contato@naturepharma.com.br'}],
-    stage:'qualificado', tabs:['qualificado','banco'], statusFlags:[],
-    proximaAcao:'2026-06-26', dataCaptacao:'2026-06-18',
-    canal:'email', valor:'R$ 3.500', agent:'a1', tags:['Saúde','Suplementos'],
-    seguidores:'48k', engajamento:'3,2%',
-    agentNote:'Agente 1 finalizou mineração — aguardando Agente 2 criar cadência',
-    inicioCadencia:'2026-06-26T10:00', ag2Status:'aguardando' },
-
-  { id:8, nome:'PetLove Premium', seg:'Pet Care & Nutrição', site:'petlovepremium.com.br', insta:'@petlovepremium',
-    pot:'medio', capital:'R$ 600k–1.5M/ano', just:'Mercado pet em explosão. Marca com produto diferenciado mas comunicação fraca.',
-    garg:'Sem UGC de tutores com seus pets. Conteúdo institucional não converte.',
-    insight:'Vídeos de pets reagindo ao produto são altamente virais e convertem orgânico.',
-    contatos:[{tipo:'wpp',tag:'WhatsApp Direto',val:'(11) 97777-3333'},{tipo:'agent',tag:'Agente 1',val:'contato@petlovepremium.com.br'}],
-    stage:'prelista', tabs:['prelista','banco'], statusFlags:[],
-    proximaAcao:null, dataCaptacao:'2026-06-20',
-    canal:'instagram', valor:'R$ 2.800', agent:'a1', tags:['Pet','Produto físico'],
-    seguidores:'87k', engajamento:'4,8%',
-    agentNote:'Agente 1 minerou — aguardando aprovação Isis para qualificar' },
-
-  { id:9, nome:'CleanHome', seg:'Limpeza & Sustentável', site:'cleanhome.com.br', insta:'@cleanhomebr',
-    pot:'medio', capital:'R$ 400k–900k/ano', just:'Produto sustentável com apelo forte mas sem prova social.',
-    garg:'Sem UGC mostrando o produto em uso real. Apenas fotos de produto sem contexto.',
-    insight:'UGC de uso real em casa conecta diretamente com o público eco-conscious.',
-    contatos:[{tipo:'email',tag:'E-mail Verificado',val:'mkt@cleanhome.com.br'},{tipo:'agent',tag:'Agente 1',val:'hello@cleanhome.com.br'}],
-    stage:'prospeccao', tabs:['prospeccao','banco'], statusFlags:[],
-    proximaAcao:'2026-06-25', dataCaptacao:'2026-06-19',
-    canal:'instagram', valor:'R$ 2.100', agent:'a2', tags:['Casa','Sustentável'],
-    agentNote:'Cadência aprovada — etapa 1 disparada hoje' },
-
-  /* ── LEADS DE TESTE RICOS ── */
-
-  { id:10, nome:'PetLove Premium', seg:'Pet Care & Nutrição', site:'petlovepremium.com.br', insta:'@petlovepremium',
-    pot:'medio', capital:'R$ 600k–1.5M/ano',
-    just:'Mercado pet em explosão — 28% de crescimento YoY. Produto de nutrição premium diferenciado, mas comunicação institucional está afastando tutores jovens.',
-    garg:'Zero UGC de tutores reais com seus pets. Todo conteúdo é foto de produto em fundo branco.',
-    insight:'Vídeos de pets reagindo ao produto são altamente virais (4–8% de engajamento médio). Campanha de Black Friday com pets é ouro puro para conversão.',
-    contatos:[{tipo:'wpp',tag:'WhatsApp Direto',val:'(11) 97777-3333'},{tipo:'email',tag:'E-mail Marketing',val:'parceria@petlovepremium.com.br'},{tipo:'td',tag:'Tomador de Decisão',val:'Mariana Souza – CMO'},{tipo:'agent',tag:'Agente 1',val:'contato@petlovepremium.com.br'}],
-    stage:'remarketing', tabs:['remarketing','banco'], statusFlags:['sazonal'],
-    sazonalNote:'Foco: Black Friday Pet — novembro 2026. Oportunidade: combo ração premium + brinquedo com UGC emocional de tutores.',
-    proximaAcao:'2026-07-10', dataCaptacao:'2026-06-20',
-    canal:'instagram', valor:'R$ 4.800', agent:'a1', tags:['Pet','Produto físico','Sazonal'],
-    seguidores:'87k', engajamento:'4,8%', escopo:['ugc'],
-    agentNote:'Lead reengajado para Black Friday Pet. Sazonal ativo — copy personalizado gerado pelo Agente 1.' },
-
-  { id:11, nome:'Sabor Raiz', seg:'Gastronomia & Delivery', site:'saborreiz.com.br', insta:'@saborraizbr',
-    pot:'medio', capital:'R$ 300k–700k/ano',
-    just:'Restaurante artesanal com identidade visual forte e público fiel, mas presença digital fraca.',
-    garg:'Sem conteúdo de bastidores. Clientela jovem pede autenticidade e processo culinário real.',
-    insight:'UGC de preparo + reação de clientes reais gera micro-viralização local e aumenta reservas orgânicas.',
-    contatos:[{tipo:'insta',tag:'Instagram DM',val:'@saborraizbr'},{tipo:'wpp',tag:'WhatsApp',val:'(21) 98543-2211'}],
-    stage:'prelista', tabs:['prelista','banco'], statusFlags:[],
-    proximaAcao:null, dataCaptacao:'2026-06-26',
-    canal:'instagram', valor:'R$ 1.800', agent:'a1', tags:['Food','Local','UGC'],
-    seguidores:'22k', engajamento:'6,2%', escopo:['ugc','gestao'],
-    agentNote:'Agente 1 minerou — alto potencial UGC gastronômico. Aguardando qualificação da Isis.' },
-
-  { id:12, nome:'FlexMove', seg:'Fitness & Mobilidade', site:'flexmove.com.br', insta:'@flexmovebr',
-    pot:'alto', capital:'R$ 1M–3M/ano',
-    just:'App de mobilidade e alongamento com 50k usuários ativos. Falta prova social humana para reduzir churn e atrair novos usuários premium.',
-    garg:'Marketing focado em features do app, não em transformação pessoal.',
-    insight:'UGC de usuários mostrando evolução (antes/depois) tem CPA 60% menor que anúncios gráficos no segmento fitness.',
-    contatos:[{tipo:'email',tag:'E-mail Verificado',val:'growth@flexmove.com.br'},{tipo:'td',tag:'Tomador de Decisão',val:'Pedro Alves – CEO'},{tipo:'wpp',tag:'WhatsApp Direto',val:'(11) 96655-4433'}],
-    stage:'aprovacao', tabs:['aprovacao','banco'], statusFlags:[],
-    proximaAcao:'2026-06-28', dataCaptacao:'2026-06-22',
-    canal:'email', valor:'R$ 9.500', agent:'a2', tags:['Fitness','App','Alto ticket'],
-    seguidores:'93k', engajamento:'3,8%', escopo:['ugc'],
-    agentNote:'Agente 2 finalizou cadência de 4 etapas com estratégia multi-canal. Aguardando aprovação Isis.' },
-];
+let Leads_Geral = [];
 
 /* ── Diario_Cadencia_Personalizado ── */
-let Cadencia = {
-  1:[
-    {id:'c1e1',et:1,titulo:'Aquecimento Orgânico',data:'2026-06-10',canal:'instagram',roteiro:'Curtir últimos 3 posts, visualizar story mais recente, salvar 1 post. NÃO comentar ainda.',occ:'Executado. Marca curtiu perfil da Isis em resposta.',motivo:'Sinalização mútua suficiente para DM.',status:'enviado',locked:false},
-    {id:'c1e2',et:2,titulo:'DM de Conexão — Gancho de Admiração',data:'2026-06-15',canal:'instagram',roteiro:'Oi [Nome]! Sou a Isis, criadora UGC especializada em beleza. Apaixonada pelo posicionamento da Glow Beauty 💛 Tenho uma ideia específica pra vocês. Posso compartilhar em 2 minutos?',occ:'Visualizou após 3h. Não respondeu.',motivo:'Aguardar 48h antes do follow-up.',status:'enviado',locked:false},
-    {id:'c1e3',et:3,titulo:'Follow-up — Prova Social em Vídeo',data:'2026-06-23',canal:'instagram',roteiro:'Oi [Nome]! Compartilhando um vídeo que produzi pro segmento de beleza — +34% de engajamento vs. conteúdo de estúdio 🌿 Imagino que vocês teriam resultados ainda maiores. Aceita dar uma olhada?',occ:'',motivo:'Proposta com dado concreto. Resposta esperada para reunião.',status:'agendado',locked:false},
-    {id:'c1e4',et:4,titulo:'Mudança de Canal — WhatsApp Direto',data:'2026-06-28',canal:'whatsapp',roteiro:'Oi Camila! Sou a Isis. Te mandei uma DM no Instagram sobre UGC pra Glow Beauty. Tenho uma proposta de 5 minutos que faz sentido pro momento de vocês. Posso enviar?',occ:'',motivo:'Diversificação de canal após silêncio no Instagram.',status:'agendado',locked:false},
-    {id:'c1e5',et:5,titulo:'Atendimento Isis — Proposta Final',data:'2026-07-05',canal:'ligacao',roteiro:'Ligação humanizada: "Oi Camila, aqui é a Isis. Preparei uma proposta específica pra Glow Beauty. Tenho 5 minutinhos pra apresentar pessoalmente. Seria possível?"',occ:'',motivo:'Intervenção humana para fechar proposta.',status:'agendado',locked:true},
-  ],
-  2:[
-    {id:'c2e1',et:1,titulo:'E-mail Frio — Case de Resultado',data:'2026-06-08',canal:'email',roteiro:'Assunto: Como reduzir o CAC da SportsMax em 30% com UGC real\n\nOi Roberto,\n\nSou a Isis, criadora UGC especializada em fitness. Vi que vocês investem forte em tráfego — tive resultados expressivos com UGC de transformação para marcas do segmento. Poderia compartilhar um case?',occ:'Aberto 2x. Sem resposta.',motivo:'Abertura dupla = interesse. Mudar assunto no próximo.',status:'enviado',locked:false},
-    {id:'c2e2',et:2,titulo:'Follow-up — Ângulo Direto',data:'2026-06-18',canal:'email',roteiro:'Assunto: Roberto, vi que você abriu meu e-mail 😄\n\nNão vou fingir que não sei. Tenho um roteiro UGC "30 dias de resultado" que aumentou ROAS em 2.4x para concorrente. Posso adaptar para SportsMax?',occ:'',motivo:'Honestidade gera curiosidade. Proposta com benchmark.',status:'agendado',locked:false},
-    {id:'c2e3',et:3,titulo:'DM Instagram — Abordagem Paralela',data:'2026-06-25',canal:'instagram',roteiro:'Oi Roberto! Sou a Isis — enviei alguns e-mails sobre UGC pra SportsMax. Instagram é mais direto. Tenho um deck de 5 slides com dados reais pra vocês. Vale 3 minutos?',occ:'',motivo:'Multi-canal após silêncio por e-mail.',status:'agendado',locked:false},
-  ],
-  4:[
-    {id:'c4e1',et:1,titulo:'DM Instagram — Primeiro Contato',data:'2026-06-05',canal:'instagram',roteiro:'Oi Larissa! Adoro o que vocês constroem na FashionBR 💛 Sou criadora UGC e tenho uma ideia de colaboração que vai conectar com a audiência autêntica de vocês. Posso compartilhar?',occ:'Respondeu! Demonstrou interesse. Pediu mais informações.',motivo:'Resposta positiva — avançar para proposta.',status:'enviado',locked:false},
-    {id:'c4e2',et:2,titulo:'Proposta Completa — Isis em Controle',data:'2026-06-12',canal:'whatsapp',roteiro:'CONTROLE TOTAL ISIS — Enviar proposta com portfólio, cases e valores. Negociação humana direta.',occ:'Isis em negociação. Reunião agendada 25/06.',motivo:'Lead quente — não automatizar.',status:'isis',locked:true},
-  ],
-  6:[
-    {id:'c6e1',et:1,titulo:'DM Instagram — Gancho de Performance',data:'2026-06-22',canal:'instagram',roteiro:'Oi Thiago! Sou a Isis, criadora UGC especializada em games. Fiz um estudo sobre conteúdo que reduz CPM em campanhas de games. Posso compartilhar o que encontrei sobre o mercado de vocês?',occ:'Enviado hoje.',motivo:'Abertura com dado concreto.',status:'enviado',locked:false},
-    {id:'c6e2',et:2,titulo:'Follow-up — Deck de Proposta',data:'2026-06-30',canal:'whatsapp',roteiro:'Oi Thiago! Enviando o mini-deck sobre UGC para games — 5 slides com dados de CPM, exemplos e proposta pra PixelGame. Vale os 3 minutos, prometo!',occ:'',motivo:'Proposta visual e objetiva.',status:'agendado',locked:false},
-  ],
-  9:[
-    {id:'c9e1',et:1,titulo:'DM Instagram — Abertura Sustentável',data:'2026-06-25',canal:'instagram',roteiro:'Oi [Nome]! Sou a Isis. Adoro o posicionamento sustentável da CleanHome 🌿 Produzir UGC de uso real mostrando o produto no dia a dia é exatamente o que vai fazer vocês viralizarem. Tenho uma ideia específica. Posso compartilhar?',occ:'',motivo:'Cadência aprovada. Aguardando disparo em 25/06.',status:'agendado',locked:false},
-  ],
-  /* PetLove Premium — cadência de reengajamento sazonal Black Friday */
-  10:[
-    {id:'c10e1',et:1,titulo:'DM Instagram — Gancho Sazonal Pet',data:'2026-07-10',canal:'instagram',roteiro:'Oi Mariana! Sou a Isis, criadora UGC especializada em Pet Care 🐾 Com a Black Friday se aproximando, marcas de nutrição premium que investem em UGC emocional agora saem na frente. Tenho um roteiro específico pra PetLove. Posso compartilhar?',occ:'Lead reengajada após 30 dias de silêncio.',motivo:'Gancho sazonal + urgência temporal para Black Friday.',status:'agendado',locked:false},
-    {id:'c10e2',et:2,titulo:'WhatsApp — Prova Social + Video UGC',data:'2026-07-17',canal:'whatsapp',roteiro:'Oi Mariana! Enviando um exemplo de UGC de pet reagindo ao produto — esse formato gerou 4.3% de engajamento para outra marca de nutrição premium. Imagino que PetLove teria resultados ainda maiores 🐕 Posso adaptar pra vocês?',occ:'',motivo:'Prova social concreta move leads de nutrição premium.',status:'agendado',locked:false},
-    {id:'c10e3',et:3,titulo:'Quebra de Objeção — ROI Concreto',data:'2026-07-24',canal:'whatsapp',roteiro:'Oi Mariana, tudo bem? Sei que decisões de conteúdo envolvem budget. Por isso trouxe os números: UGC pet no Black Friday converte 3x mais que foto de produto. Tenho proposta específica pra vocês. Vale 15 minutinhos de call?',occ:'',motivo:'Objeção de budget é comum nesse ticket. Dado concreto + CTA suave.',status:'pendente',locked:false},
-    {id:'c10e4',et:4,titulo:'Call de Proposta — Isis em Controle',data:'2026-08-01',canal:'ligacao',roteiro:'Call humanizada com Mariana. Apresentar proposta de pacote Black Friday: 4 vídeos UGC de pets + 2 stories de tutores. Negociar início em setembro para entrega até outubro.',occ:'',motivo:'Lead quente para Black Friday — fechar em agosto para produção em setembro.',status:'pendente',locked:true},
-  ],
-  /* FlexMove — cadência de aprovação multi-canal */
-  12:[
-    {id:'c12e1',et:1,titulo:'E-mail Frio — Proposta com Dado',data:'2026-06-22',canal:'email',roteiro:'Assunto: Como o FlexMove pode reduzir CAC em 60% com UGC de transformação\n\nOi Pedro, sou a Isis, criadora UGC especializada em fitness. Apps de mobilidade que usam UGC de antes/depois têm CPA 60% menor. Tenho uma proposta específica pra vocês. Pode dar uma olhada?',occ:'Aberto 3x em 24h. Alto interesse.',motivo:'Dado de benchmark forte + proposta direta = abertura qualificada.',status:'enviado',locked:false},
-    {id:'c12e2',et:2,titulo:'Follow-up — Deck de Resultado',data:'2026-06-25',canal:'email',roteiro:'Assunto: Pedro, vi que você abriu meu e-mail 😄\n\nEnviando um mini-deck com 3 cases de UGC fitness que reduziram churn de apps similares. 5 slides, prometo que vale. Posso adaptar para o FlexMove?',occ:'Clicou no link do deck. Sem resposta ainda.',motivo:'Engajamento real com o conteúdo. Pronto para transição de canal.',status:'enviado',locked:false},
-    {id:'c12e3',et:3,titulo:'DM Instagram — Abordagem Paralela',data:'2026-06-28',canal:'instagram',roteiro:'Oi Pedro! Sou a Isis — enviei uns e-mails pro FlexMove. Instagram é mais direto 🙂 Tenho uma ideia de UGC de transformação que vai encaixar perfeitamente no posicionamento de vocês. Vale 3 minutinhos?',occ:'',motivo:'Multi-canal após engajamento por e-mail. Instagram tem resposta mais rápida.',status:'agendado',locked:false},
-    {id:'c12e4',et:4,titulo:'WhatsApp — Proposta Final + CTA',data:'2026-07-03',canal:'whatsapp',roteiro:'Oi Pedro! Resumindo o que tenho pra FlexMove: 4 vídeos UGC de usuários reais (antes/depois de 30 dias), roteiro estratégico, entrega em 2 semanas. Investimento: R$ 9.500. Posso enviar contrato?',occ:'',motivo:'Proposta objetiva com valor, prazo e CTA de fechamento.',status:'pendente',locked:false},
-  ],
-};
+let Cadencia = {};
 
 /* ── Clientes_Ativos ── */
-let Clientes_Ativos = [
-  { id:1, nome:'BeautyLab', seg:'Cosméticos Naturais', site:'beautylab.com.br', insta:'@beautylabbr', valorPacote:6000, dataFechamento:'2026-05-15', seguidores:95000, capitalPot:'alto',
-    pacote:'Pacote Creator Pro', clausulas:['3 vídeos UGC/mês (Reels 15–30s)','Exclusividade de nicho por 90 dias','Entrega em até 7 dias úteis após briefing','Revisão ilimitada até aprovação final','Licença de uso nas redes sociais por 12 meses'] },
-  { id:2, nome:'RunFast', seg:'Fitness & Corrida', site:'runfast.com.br', insta:'@runfastbr', valorPacote:4500, dataFechamento:'2026-05-22', seguidores:62000, capitalPot:'medio',
-    pacote:'Pacote Starter UGC', clausulas:['2 vídeos UGC/mês','Sem exclusividade de nicho','Entrega em até 10 dias úteis','1 revisão por vídeo','Licença de uso por 6 meses'] },
-  { id:3, nome:'OrganicLife', seg:'Alimentação Saudável', site:'organiclife.com.br', insta:'@organiclifebr', valorPacote:3200, dataFechamento:'2026-06-03', seguidores:41000, capitalPot:'medio',
-    pacote:'Pacote Starter UGC', clausulas:['2 vídeos UGC/mês','Foco em receitas e uso do produto','Entrega em até 10 dias úteis','1 revisão por vídeo','Licença de uso por 6 meses'] },
-  { id:4, nome:'TechWear', seg:'Moda & Tecnologia', site:'techwear.com.br', insta:'@techwearbr', valorPacote:8500, dataFechamento:'2026-06-10', seguidores:180000, capitalPot:'alto',
-    pacote:'Pacote Premium Full', clausulas:['5 vídeos UGC/mês (Reels + Stories)','Exclusividade total de nicho por 6 meses','Entrega em até 5 dias úteis','Revisões ilimitadas','Licença full: redes sociais + tráfego pago por 24 meses','Relatório mensal de performance'] },
-  { id:5, nome:'PureSkin', seg:'Dermocosmética', site:'pureskin.com.br', insta:'@pureskinglow', valorPacote:5000, dataFechamento:'2026-06-18', seguidores:78000, capitalPot:'alto',
-    pacote:'Pacote Creator Pro', clausulas:['3 vídeos UGC/mês','Foco em skincare rotina e resultados','Entrega em até 7 dias úteis','Revisão ilimitada','Licença de uso nas redes sociais por 12 meses'] },
-];
+let Clientes_Ativos = [];
 
 /* ── Calls Agendadas ── */
-let CallsAgendadas = [
-  { id:'c1', leadId:4, nome:'FashionBR', data:'2026-06-25', hora:'15:00', intuito:'Apresentar proposta de parceria UGC Full — fechar Pacote Premium. Larissa quer ver portfólio e dados de ROAS.', materiais:['Portfólio UGC Moda 2025','Deck de proposta personalizado','Cases com ROAS 2.4x'], status:'agendada', resultou:'pendente' },
-  { id:'c2', leadId:6, nome:'PixelGame', data:'2026-06-28', hora:'10:30', intuito:'Follow-up após resposta no Instagram. Thiago quer entender como funciona o processo criativo para games.', materiais:['Case de gameplay UGC','Exemplos de CPM reduction'], status:'agendada', resultou:'pendente' },
-];
+let CallsAgendadas = [];
 
 /* ── Interacoes (Histórico por lead) ── */
-let Interacoes = {
-  1: [
-    { id:'i1a', tipo:'captada', data:'2026-06-23 14:32', canal:'instagram',
-      texto:'Oi Isis! Adorei seu portfólio de UGC. A gente tem muito interesse em trabalhar com criadores autênticos. Pode me contar mais sobre os pacotes e como funcionaria com a Glow Beauty?' },
-    { id:'i1b', tipo:'ia', data:'2026-06-23 14:45', canal:'instagram', aprovado:false,
-      texto:'Oi Camila! Que alegria receber sua mensagem 😊 Fico muito feliz que o portfólio conectou com vocês!\n\nPreparo uma proposta personalizada pra Glow Beauty — vi que vocês têm um posicionamento incrível e sei exatamente que tipo de UGC vai amplificar isso.\n\nPosso te mandar um deck com 3 formatos que funcionam muito bem pra beleza? Prometo que é objetivo e direto ao ponto 🌿' },
-  ],
-  4: [
-    { id:'i4a', tipo:'captada', data:'2026-06-12 10:15', canal:'whatsapp',
-      texto:'Oi Isis! A Larissa aqui da FashionBR. Adorei sua proposta! Ficamos curiosas com os resultados que você mencionou. Poderia compartilhar algum case de moda?' },
-    { id:'i4b', tipo:'ia', data:'2026-06-12 10:28', canal:'whatsapp', aprovado:true,
-      texto:'Oi Larissa! Claro, com prazer! 🙌\n\nTenho um case incrível de uma marca de lifestyle com perfil parecido com o da FashionBR — o UGC diverso gerou +68% de engajamento em 30 dias e reduziu o CAC em 35%.\n\nMando o deck completo agora. Já agendei uma reunião rápida para a semana que vem — funciona?' },
-  ],
-  6: [
-    { id:'i6a', tipo:'captada', data:'2026-06-22 16:05', canal:'instagram',
-      texto:'Olá! Sou o Thiago da PixelGame. Interessante sua abordagem com games. Que dados você tem sobre CPM com UGC no segmento mobile?' },
-    { id:'i6b', tipo:'ia', data:'2026-06-22 16:20', canal:'instagram', aprovado:false,
-      texto:'Oi Thiago! Que ótima pergunta! 🎮\n\nTenho dados de 3 campanhas recentes:\n• CPM médio com UGC de gameplay: R$4,20 vs R$8,90 com criativos de estúdio (-53%)\n• CTR do UGC de reaction: 4,8% vs 2,1% dos ads padrão\n• ROAS da campanha com UGC: 3.7x\n\nPosso montar um mini-deck específico pra realidade da PixelGame? Levo menos de 10 minutos pra explicar a metodologia 🚀' },
-  ],
-  9: [
-    { id:'i9a', tipo:'captada', data:'2026-06-25 09:00', canal:'instagram',
-      texto:'Oi! Vi sua mensagem sobre UGC sustentável. A gente realmente sente falta disso no nosso conteúdo. Conta mais?' },
-    { id:'i9b', tipo:'ia', data:'2026-06-25 09:10', canal:'instagram', aprovado:false,
-      texto:'Oi! Fico muito feliz que a mensagem fez sentido ✨\n\nVi que a CleanHome tem um posicionamento eco-conscious muito forte — o produto fala por si só, só precisa de contexto real.\n\nMinha proposta seria criar UGC mostrando o produto em uso genuíno no dia a dia: cozinha, banheiro, rotina de limpeza. Conteúdo que o seu público já quer ver mas não encontra.\n\nPosso montar um story de proposta em 5 slides? 🌿' },
-  ],
-};
+let Interacoes = {};
 
 /* ── FILA DE APROVAÇÕES (Agenda Isis) ── */
-let AprovacoesPendentes = [
-  { id:'ap1', tipo:'prelista', agente:'Agente 1 · Caçador', data:'2026-06-22', titulo:'Aprovar Pré-Lista: Segmento Pet Care', desc:'Agente 1 minerou 12 marcas de Pet Care. PetLove Premium está na lista como destaque. Aprovação libera qualificação manual pela Isis.', leadId:8, urgente:true },
-  { id:'ap2', tipo:'cadencia', agente:'Agente 2 · Roteirista', data:'2026-06-23', titulo:'Aprovar Cadência: SportsMax (3 etapas)', desc:'Agente 2 criou fluxo de 3 etapas para SportsMax com copies personalizadas por e-mail + Instagram. Aprovação libera para fila de disparo.', leadId:2, urgente:true },
-  { id:'ap3', tipo:'disparo', agente:'Agente Atendente', data:'2026-06-23', titulo:'Aprovar Disparo: Glow Beauty — Etapa 3', desc:'Follow-up com prova social em vídeo pronto para envio via Instagram DM. Agendado para hoje às 14h. Revise o roteiro antes de aprovar.', leadId:1, urgente:false },
-  { id:'ap4', tipo:'prelista', agente:'Agente 1 · Caçador', data:'2026-06-25', titulo:'Aprovar Pré-Lista: Segmento Limpeza Sustentável', desc:'8 novas marcas mineradas no nicho de limpeza eco-friendly. Aprovação libera qualificação e criação de cadência pelo Agente 2.', leadId:null, urgente:false },
-  { id:'ap5', tipo:'resposta', agente:'Agente Atendente', data:'2026-06-27', titulo:'Revisar Resposta: PixelGame respondeu!', desc:'Thiago Nunes respondeu à DM do Instagram com interesse. Agente Atendente preparou resposta de follow-up. Revisar antes de enviar.', leadId:6, urgente:false },
-];
+let AprovacoesPendentes = [];
 
 /* ── FILA DE DISPAROS AGENTES ── */
-let FilaDisparos = [
-  { id:'fd1', agente:'at', leadNome:'Glow Beauty', leadId:1, canal:'instagram', acao:'Enviar etapa 3 — Follow-up com prova social', preview:'Oi [Nome]! Compartilhando um vídeo que produzi pro segmento de beleza — +34% de engajamento vs. conteúdo de estúdio 🌿', horario:'Hoje 14:00', status:'aguardando' },
-  { id:'fd2', agente:'at', leadNome:'PixelGame', leadId:6, canal:'instagram', acao:'Resposta à mensagem de Thiago Nunes', preview:'Oi Thiago! Fico feliz que tenha feito sentido! Preparei um mini-deck com 3 exemplos reais de CPM reduzido para games mobile. Você tem 10 minutos para uma call rápida essa semana?', horario:'Amanhã 10:00', status:'aguardando' },
-  { id:'fd3', agente:'a2', leadNome:'CleanHome', leadId:9, canal:'instagram', acao:'Disparar etapa 1 — DM de abertura', preview:'Oi [Nome]! Sou a Isis. Adoro o posicionamento sustentável da CleanHome 🌿', horario:'25/06 10:00', status:'aprovado' },
-  { id:'fd4', agente:'a1', leadNome:'Mineração Ativa', leadId:null, canal:null, acao:'Buscando 50 marcas de Moda Praia no Instagram', preview:'Filtros: nicho=moda_praia, seguidores=10k-500k, bio_contém=verão|coleção|beachwear, sem_parceria_ugc=true', horario:'Rodando agora', status:'processando' },
-];
+let FilaDisparos = [];
 
 /* ── TAREFAS DOS AGENTES POR DIA/HORA ── */
-const AGENT_TASKS = {
-  a1: [
-    { id:'t-a1-1', data:'2026-06-24', hora:'09:00', status:'exec',   desc:'Mineração: Moda Praia Instagram', detail:'Filtrando 50 marcas com 10k–500k seguidores, bio_contém=verão|beachwear' },
-    { id:'t-a1-2', data:'2026-06-24', hora:'11:30', status:'aprov',  desc:'Pré-lista Pet Care aguardando aprovação', detail:'12 marcas mineradas. PetLove Premium é destaque. Liberação depende de Isis.' },
-    { id:'t-a1-3', data:'2026-06-25', hora:'10:00', status:'sched',  desc:'Iniciar mineração Fitness Feminino', detail:'Segmento programado para 26/06. Preparar critérios de qualificação antes.' },
-    { id:'t-a1-4', data:'2026-06-25', hora:'14:00', status:'sched',  desc:'Qualificar PetLove Premium', detail:'Pendente aprovação Isis da pré-lista. Executar após green-light.' },
-    { id:'t-a1-5', data:'2026-06-27', hora:'09:00', status:'sched',  desc:'Mineração: Limpeza Sustentável (8 marcas)', detail:'Continuação do lote aprovado em 25/06.' },
-  ],
-  a2: [
-    { id:'t-a2-1', data:'2026-06-24', hora:'10:00', status:'exec',   desc:'Criando cadência SportsMax — etapa 2/3', detail:'Copies personalizadas por e-mail + Instagram DM. Baseado no histórico de engajamento.' },
-    { id:'t-a2-2', data:'2026-06-24', hora:'13:00', status:'wait',   desc:'Aguardar aprovação cadência SportsMax', detail:'Precisa do green-light de Isis para liberar disparo via Agente 5.' },
-    { id:'t-a2-3', data:'2026-06-25', hora:'09:30', status:'sched',  desc:'Criar cadência NaturePharma', detail:'Após qualificação Isis. Tom: cientÍfico-humanizado. 4 etapas.' },
-    { id:'t-a2-4', data:'2026-06-25', hora:'11:00', status:'sched',  desc:'Revisar cadência CleanHome etapa 1', detail:'Etapa 1 enviada com sucesso. Preparar etapa 2 com follow-up de prova social.' },
-    { id:'t-a2-5', data:'2026-06-26', hora:'10:00', status:'sched',  desc:'Variação B de cadência Fitness', detail:'A/B test para leads do segmento fitness feminino.' },
-  ],
-  a3: [
-    { id:'t-a3-1', data:'2026-06-24', hora:'09:00', status:'wait',   desc:'Aguardando cadências aprovadas para briefs', detail:'Não há briefs ativos enquanto Agente 2 finaliza cadências pendentes.' },
-    { id:'t-a3-2', data:'2026-06-25', hora:'10:00', status:'sched',  desc:'Brief UGC FashionBR — reunião Isis', detail:'Reunião às 15h. Preparar moodboard, referências e script de apresentação.' },
-    { id:'t-a3-3', data:'2026-06-25', hora:'14:00', status:'sched',  desc:'Brief sustentável CleanHome', detail:'Criar direção visual eco-friendly para UGC de limpeza.' },
-    { id:'t-a3-4', data:'2026-06-26', hora:'11:00', status:'sched',  desc:'Moodboard PixelGame', detail:'Criar proposta visual gaming + creators para apresentar ao Thiago Nunes.' },
-  ],
-  a4: [
-    { id:'t-a4-1', data:'2026-06-24', hora:'08:00', status:'exec',   desc:'Compilando relatório conversão maio/junho', detail:'Cruzando dados de taxa de abertura × resposta × fechamento por segmento.' },
-    { id:'t-a4-2', data:'2026-06-24', hora:'12:00', status:'sched',  desc:'Análise preditiva: LTV por nicho', detail:'Modelo preditivo baseado nos últimos 6 meses de dados.' },
-    { id:'t-a4-3', data:'2026-06-30', hora:'09:00', status:'sched',  desc:'Relatório ROI por nicho — entrega', detail:'Comparativo ROI UGC Isis vs. estúdio por segmento. Deadline: 30/06.' },
-    { id:'t-a4-4', data:'2026-06-30', hora:'14:00', status:'sched',  desc:'Benchmark competitivo UGC', detail:'Análise de 5 concorrentes creators do mesmo nível de Isis.' },
-  ],
-  a5: [
-    { id:'t-a5-1', data:'2026-06-24', hora:'14:00', status:'aprov',  desc:'Aguardando aprovação fila de disparos hoje', detail:'Glow Beauty etapa 3 e CleanHome etapa 1 na fila. Isis precisa aprovar.' },
-    { id:'t-a5-2', data:'2026-06-25', hora:'10:00', status:'sched',  desc:'Disparar CleanHome etapa 1 (aprovado)', detail:'DM de abertura. Aprovado em 23/06. Agendado conforme janela de horário nobre.' },
-    { id:'t-a5-3', data:'2026-06-25', hora:'11:00', status:'sched',  desc:'Agendar SportsMax etapa 2 após aprovação', detail:'Pendente Agente 2 entregar + Isis aprovar cadência.' },
-    { id:'t-a5-4', data:'2026-06-26', hora:'09:00', status:'sched',  desc:'Configurar follow-up automático 48h', detail:'Para leads que não respondem à etapa 1 no prazo.' },
-  ],
-  at: [
-    { id:'t-at-1', data:'2026-06-24', hora:'00:00', status:'exec',   desc:'Monitorando DMs: Glow Beauty · PixelGame', detail:'Alerta ativo. PixelGame respondeu — aguardando aprovação de Isis para responder.' },
-    { id:'t-at-2', data:'2026-06-24', hora:'14:00', status:'aprov',  desc:'Resposta Thiago Nunes (PixelGame) aguardando aprovação', detail:'DM preparada. Tom: entusiasmado + proposta de call rápida. Revisar antes de enviar.' },
-    { id:'t-at-3', data:'2026-06-24', hora:'16:00', status:'sched',  desc:'Monitorar resposta Glow Beauty etapa 3', detail:'Envio às 14h. Verificar leitura e resposta até 16h.' },
-    { id:'t-at-4', data:'2026-06-25', hora:'10:00', status:'sched',  desc:'Ativar monitoramento novos leads prospecção', detail:'SportsMax e NaturePharma entram no radar após aprovação cadências.' },
-    { id:'t-at-5', data:'2026-06-27', hora:'09:00', status:'sched',  desc:'Revisar resposta PixelGame — follow-up 48h', detail:'Caso não responda à call prop., preparar follow-up com case de games mobile.' },
-  ],
-};
+const AGENT_TASKS = { a1:[], a2:[], a3:[], a4:[], a5:[], at:[] };
 
 /* mapa de navegação por tipo de aprovação */
 const TIPO_PAGE_MAP = {
