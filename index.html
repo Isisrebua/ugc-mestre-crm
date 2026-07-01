@@ -1150,6 +1150,18 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
   .raiox-stats-grid{grid-template-columns:1fr!important}
 }
 
+/* ── ALERTA DE DUPLICATA NO MODAL ── */
+.dup-alert{
+  display:none;
+  background:#FFF3CD;border:1.5px solid #F5C842;border-radius:var(--r-md);
+  padding:10px 14px;margin-bottom:12px;
+  font-size:12px;color:#7A5700;line-height:1.5;
+  animation:fadeIn .2s ease;
+}
+.dup-alert.visible{display:flex;align-items:flex-start;gap:8px}
+.dup-alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.dup-alert strong{font-weight:800}
+
 /* ══ TELA DE LOGIN ══════════════════════════════ */
 #login-screen{
   position:fixed;inset:0;z-index:9999;
@@ -1931,13 +1943,17 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
 <div class="modal-bg" id="modal" onclick="closeModalOut(event)">
   <div class="modal">
     <div class="modal-title">✦ Novo Lead · Marca UGC</div>
+    <div class="dup-alert" id="dup-alert">
+      <span class="dup-alert-icon">⚠️</span>
+      <div id="dup-alert-msg"></div>
+    </div>
     <div class="form-sect">
       <div class="form-sect-lbl">Identificação</div>
       <div class="form-grid">
-        <div class="fg"><label class="fl">Nome da Marca *</label><input class="fi" id="m-nome" placeholder="Ex: Glow Beauty"/></div>
+        <div class="fg"><label class="fl">Nome da Marca *</label><input class="fi" id="m-nome" placeholder="Ex: Glow Beauty" onblur="checkDupModal()"/></div>
         <div class="fg"><label class="fl">Subsegmento</label><input class="fi" id="m-seg" placeholder="Ex: Cosméticos Naturais"/></div>
         <div class="fg"><label class="fl">Site / Domínio</label><input class="fi" id="m-site" placeholder="www.marca.com.br"/></div>
-        <div class="fg"><label class="fl">Instagram</label><input class="fi" id="m-insta" placeholder="@marcaxyz"/></div>
+        <div class="fg"><label class="fl">Instagram</label><input class="fi" id="m-insta" placeholder="@marcaxyz" onblur="checkDupModal()"/></div>
       </div>
     </div>
     <div class="form-sect">
@@ -6373,13 +6389,78 @@ function addStep(leadId, page) {
 /* ═══════════════════════════════════════
    MODAL
 ═══════════════════════════════════════ */
-function openModal() { document.getElementById('modal').classList.add('open'); }
+/* ═══════════════════════════════════════
+   DETECÇÃO DE DUPLICATAS
+═══════════════════════════════════════ */
+const STAGE_LABELS = {
+  prelista:'Pré-Lista', qualificado:'Lead Qualificado', aprovacao:'Ag. Aprovação',
+  aprovado:'Aprovado p/ Fluxo', prospeccao:'Em Prospecção', standby:'Stand By',
+  remarketing:'Remarketing', isis:'Atendimento Isis', cliente:'Cliente Ativo'
+};
+
+function _normInsta(v) {
+  return (v||'').toLowerCase().replace(/^@/,'').trim();
+}
+
+function _findDuplicate(nome, insta) {
+  const nomeNorm  = (nome||'').toLowerCase().trim();
+  const instaNorm = _normInsta(insta);
+  return Leads_Geral.find(l => {
+    if (nomeNorm  && l.nome  && l.nome.toLowerCase().trim() === nomeNorm)  return true;
+    if (instaNorm && l.insta && _normInsta(l.insta) === instaNorm)          return true;
+    return false;
+  }) || null;
+}
+
+function checkDupModal() {
+  const nome  = document.getElementById('m-nome').value.trim();
+  const insta = document.getElementById('m-insta').value.trim();
+  const alertEl = document.getElementById('dup-alert');
+  const msgEl   = document.getElementById('dup-alert-msg');
+  const dup = _findDuplicate(nome, insta);
+  if (dup) {
+    const etapa = STAGE_LABELS[dup.stage] || dup.stage || '—';
+    const ig = dup.insta ? ` (${dup.insta})` : '';
+    msgEl.innerHTML = `<strong>Marca já cadastrada!</strong> <em>${dup.nome}${ig}</em> já existe no sistema e está na etapa <strong>${etapa}</strong>. Verifique antes de criar um novo registro.`;
+    alertEl.classList.add('visible');
+  } else {
+    alertEl.classList.remove('visible');
+  }
+}
+
+function openModal() {
+  document.getElementById('dup-alert').classList.remove('visible');
+  document.getElementById('modal').classList.add('open');
+}
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
 function closeModalOut(e) { if (e.target === document.getElementById('modal')) closeModal(); }
+
+/* Usado por agentes para inserir leads minerados — bloqueia duplicatas silenciosamente */
+function addLeadFromAgent(leadData) {
+  const dup = _findDuplicate(leadData.nome, leadData.insta);
+  if (dup) {
+    console.warn(`[Agente] Lead duplicado bloqueado: "${leadData.nome}" já existe (id=${dup.id}, stage=${dup.stage})`);
+    return { blocked: true, existing: dup };
+  }
+  const newId = Math.max(...Leads_Geral.map(l => l.id), 0) + 1;
+  const lead = Object.assign({ stage:'prelista', agent:'a1', tags:[], contatos:[] }, leadData, { id: newId });
+  Leads_Geral.push(lead);
+  Cadencia[newId] = [];
+  _scheduleSave();
+  updateBadges();
+  return { blocked: false, lead };
+}
 
 function saveLead() {
   const nome = document.getElementById('m-nome').value.trim();
   if (!nome) { alert('Informe o nome da marca.'); return; }
+  const insta = document.getElementById('m-insta').value.trim();
+  const dup = _findDuplicate(nome, insta);
+  if (dup) {
+    checkDupModal();
+    document.getElementById('dup-alert').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    return;
+  }
   const newId = Math.max(...Leads_Geral.map(l=>l.id), 0) + 1;
   const email = document.getElementById('m-email').value;
   const wpp   = document.getElementById('m-wpp').value;
@@ -6390,7 +6471,7 @@ function saveLead() {
 
   Leads_Geral.push({
     id:newId, nome, seg:document.getElementById('m-seg').value||'Sem segmento',
-    site:document.getElementById('m-site').value, insta:document.getElementById('m-insta').value,
+    site:document.getElementById('m-site').value, insta,
     pot:document.getElementById('m-pot').value, capital:document.getElementById('m-cap').value,
     just:document.getElementById('m-just').value, garg:document.getElementById('m-garg').value,
     insight:document.getElementById('m-ins').value, contatos,
