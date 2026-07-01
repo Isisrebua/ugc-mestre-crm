@@ -992,16 +992,122 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
 .niche-count{font-size:10px;font-weight:800;color:var(--txt);width:22px;text-align:right;flex-shrink:0}
 .predictive-box{background:linear-gradient(135deg,var(--blue-p),#E8F4FF);border-radius:var(--r-lg);padding:14px;border-left:3px solid var(--blue-d);font-size:11px;color:var(--txt-m);line-height:1.7}
 .predictive-box strong{color:var(--blue-d)}
-/* ── Responsive PWA ── */
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVO MOBILE  (≤ 768 px)
+══════════════════════════════════════════════════════════════ */
 @media(max-width:768px){
-  .sidebar{position:fixed;z-index:400;height:100dvh;transform:translateX(-100%);transition:transform .25s ease}
+
+  /* ── App shell ── */
+  .app{flex-direction:column;height:100dvh}
+
+  /* ── Sidebar: gaveta lateral ── */
+  .sidebar{
+    position:fixed;z-index:500;
+    height:100dvh;width:82vw!important;max-width:280px;
+    transform:translateX(-110%);
+    transition:transform .25s ease;
+    box-shadow:4px 0 24px rgba(0,0,0,.15);
+  }
   .sidebar.mobile-open{transform:translateX(0)}
+
+  /* overlay escuro ao abrir sidebar */
+  .sidebar.mobile-open::after{
+    content:'';position:fixed;inset:0;left:100%;width:100vw;
+    background:rgba(0,0,0,.35);z-index:-1;
+  }
+
+  /* ── Main ocupa tudo ── */
+  .main{width:100vw;margin-left:0!important}
   .content{margin-left:0!important;width:100vw}
-  .prosp-workspace-cols{flex-direction:column!important}
-  .prosp-col2,.prosp-col3{min-height:300px;border-right:none!important;border-top:2px solid var(--cream-dd)}
-  .aprov-modal-panel{width:100vw!important}
+
+  /* ── Topbar: compacta ── */
+  .topbar{padding:10px 14px;gap:8px;flex-wrap:wrap}
+  .topbar-title{font-size:15px}
+  .topbar-right{gap:6px;flex-wrap:wrap}
+  .search-bar{width:140px;font-size:11px}
+
+  /* ── Hamburger sempre visível ── */
+  .hamburger{display:flex!important}
+
+  /* ── Scroll padding menor ── */
+  .scroll{padding:14px 12px}
+
+  /* ══ VISÃO GERAL ══ */
+  /* KPI grid: 2 colunas no celular */
+  .vg-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
+
+  /* Cards de insight: coluna única */
+  .insight-grid{grid-template-columns:1fr!important}
+
+  /* ── Banco BI: coluna única ── */
+  .banco-bi-grid{grid-template-columns:1fr!important;gap:12px}
+
+  /* ── Formulários: coluna única ── */
+  .form-grid{grid-template-columns:1fr!important}
+  .pl-dispatch-cols{grid-template-columns:1fr!important;gap:8px}
+
+  /* ══ ESTEIRA DE PROSPECÇÃO ══
+     Col1 (lista) ocupa 100% em cima,
+     Col2 (detalhe) abaixo, Col3 (conversa) abaixo.
+     Scrollável por swipe horizontal se precisar. */
+  .prosp-workspace-cols{
+    flex-direction:column!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+  .prosp-col1{
+    width:100%!important;max-width:100%!important;
+    min-width:0!important;
+    border-right:none!important;
+    border-bottom:2px solid var(--cream-dd);
+    height:auto!important;
+    max-height:42vh;
+  }
+  .prosp-col2{
+    width:100%!important;min-width:0!important;
+    border-right:none!important;
+    border-top:2px solid var(--cream-dd);
+    min-height:280px;
+  }
+  .prosp-col3{
+    width:100%!important;min-width:0!important;
+    border-right:none!important;
+    border-top:2px solid var(--cream-dd);
+    min-height:280px;max-height:50vh;
+  }
+
+  /* ══ MODAL DE DETALHE (lead detail) ══ */
+  .detail-cols{
+    grid-template-columns:1fr!important;
+    overflow-y:auto!important;
+  }
+
+  /* ── Painéis de aprovação ── */
+  .aprov-modal-panel{width:100vw!important;max-width:100vw!important}
   #aprov-raiox-panel{display:none!important}
-  .lws-col{min-width:0;flex:1}
+
+  /* ── Texto e inputs ── */
+  .filter-bar{padding:8px 10px;gap:6px}
+  .cmd-bar-top{gap:6px}
+  .period-bar{gap:6px}
+
+  /* ── Botões pill — não deixar quebrar ── */
+  .btn{padding:7px 14px;font-size:11px}
+  .btn-sm{padding:4px 10px;font-size:10px}
+
+  /* ── Tags de etapa ── */
+  .stage-tabs-row{gap:3px;padding:5px 8px 6px}
+
+  /* ── Colunas do Banco ── */
+  .lws-col{min-width:0!important;flex:1}
+
+  /* ── Calendário ── */
+  .cal-grid{gap:1px;font-size:10px}
+
+  /* ── Painel de agentes: 1 coluna ── */
+  .agent-cards-grid,.agents-grid{
+    grid-template-columns:1fr!important;
+  }
 }
 </style>
 <link rel="manifest" href="manifest.json">
