@@ -55,6 +55,8 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
   cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
   color:var(--txt-m);flex-shrink:0;transition:var(--tr);
 }
+/* botão de menu mobile — oculto no desktop */
+.mob-menu-btn{display:none}
 .hamburger:hover{box-shadow:var(--sh-hv)}
 
 .sb-section-label{
@@ -322,6 +324,7 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
 .metric-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--blue-d))}
 
 .insight-grid{display:grid;grid-template-columns:1fr;gap:14px}
+.vg-agents-aprov-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .insight-card{background:var(--cream);border-radius:var(--r-xl);padding:20px;box-shadow:var(--sh)}
 .insight-title{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px}
 
@@ -1026,8 +1029,20 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
   .topbar-right{gap:6px;flex-wrap:wrap}
   .search-bar{width:140px;font-size:11px}
 
-  /* ── Hamburger sempre visível ── */
-  .hamburger{display:flex!important}
+  /* ── Hamburger da sidebar: oculto no mobile (fica dentro da gaveta) ── */
+  .hamburger{display:none!important}
+
+  /* ── Botão de menu fixo na topbar ── */
+  .mob-menu-btn{
+    display:flex!important;
+    flex-direction:column;justify-content:center;align-items:center;gap:5px;
+    width:36px;height:36px;border-radius:10px;border:none;flex-shrink:0;
+    background:var(--cream);box-shadow:var(--sh);cursor:pointer;padding:0;
+  }
+  .mob-menu-btn span{
+    display:block;width:18px;height:2px;border-radius:2px;
+    background:var(--txt-m);transition:var(--tr);
+  }
 
   /* ── Scroll padding menor ── */
   .scroll{padding:14px 12px}
@@ -1108,6 +1123,8 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
   .agent-cards-grid,.agents-grid{
     grid-template-columns:1fr!important;
   }
+  /* ── Agentes + Aprovações: empilhados ── */
+  .vg-agents-aprov-grid{grid-template-columns:1fr!important}
 }
 </style>
 <link rel="manifest" href="manifest.json">
@@ -1255,6 +1272,9 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
 <!-- ══ MAIN ══════════════════════════════════════════ -->
 <div class="main">
   <div class="topbar">
+    <button class="mob-menu-btn" id="mob-menu-btn" onclick="toggleMobileMenu()" aria-label="Abrir menu">
+      <span></span><span></span><span></span>
+    </button>
     <div class="topbar-title" id="page-title">Visão Geral · Insights</div>
     <div class="topbar-right">
       <div class="search-wrap">
@@ -2319,6 +2339,31 @@ function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
   document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
 }
+
+function toggleMobileMenu() {
+  const sb = document.getElementById('sidebar');
+  const open = sb.classList.toggle('mobile-open');
+  // fecha ao clicar fora (overlay)
+  if (open) {
+    const close = (e) => {
+      if (!sb.contains(e.target) && !document.getElementById('mob-menu-btn').contains(e.target)) {
+        sb.classList.remove('mobile-open');
+        document.removeEventListener('pointerdown', close);
+      }
+    };
+    setTimeout(() => document.addEventListener('pointerdown', close), 50);
+  }
+}
+
+// fecha sidebar mobile ao navegar
+const _origSetPage = typeof setPage === 'function' ? setPage : null;
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('mobile-open');
+    });
+  });
+});
 
 /* ═══════════════════════════════════════
    PAGES
@@ -5071,7 +5116,7 @@ function renderVisaoGeral() {
 
   document.getElementById('insight-grid').innerHTML = `
     <div class="insight-card" style="grid-column:1/-1">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="vg-agents-aprov-grid">
 
         <!-- Agentes -->
         <div>
