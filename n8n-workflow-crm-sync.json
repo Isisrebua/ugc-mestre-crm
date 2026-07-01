@@ -1,0 +1,142 @@
+{
+  "name": "UGC Mestre CRM — Sync Rota B",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-push",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f1a2b3c4-1111-1111-1111-000000000001",
+      "name": "Webhook — Push",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recebe o payload do CRM e constrói SQL de upsert para cada tabela.\n// O n8n injeta o body do POST em $input.first().json\nconst body = $input.first().json;\n\nfunction esc(v) {\n  if (v === null || v === undefined) return 'NULL';\n  if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';\n  if (typeof v === 'number') return String(v);\n  return \"'\" + String(v).replace(/'/g, \"''\") + \"'\";\n}\nfunction escJ(v) {\n  return \"'\" + JSON.stringify(v).replace(/'/g, \"''\") + \"'\";\n}\nfunction escArr(arr) {\n  if (!arr || !arr.length) return \"ARRAY[]::text[]\";\n  const inner = arr.map(s => '\"' + String(s).replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"') + '\"').join(',');\n  return \"'\" + '{' + inner + '}' + \"'::text[]\";\n}\n\nconst parts = [];\n\n// ── leads ──────────────────────────────────────────────────\nconst leads = body.leads || [];\nif (leads.length) {\n  const vals = leads.map(l => `(\n    ${esc(l.id)}, ${esc(l.nome)}, ${esc(l.seg)}, ${esc(l.insta)}, ${esc(l.site)},\n    ${esc(l.canal)}, ${esc(l.pot)}, ${esc(l.capital)}, ${esc(l.valor)}, ${esc(l.agent)},\n    ${escArr(l.tags)}, ${esc(l.seguidores)}, ${esc(l.engajamento)},\n    ${esc(l.just)}, ${esc(l.garg)}, ${esc(l.insight)}, ${escJ(l.contatos || [])},\n    ${esc(l.stage || 'prelista')}, ${escArr(l.tabs || [l.stage])}, ${escArr(l.escopo || ['ugc'])},\n    ${escArr(l.statusFlags || [])}, ${esc(l.dataCaptacao)}, ${esc(l.proximaAcao)},\n    ${esc(l.retomarContato)}, ${l.cadenciaPausada ? 'TRUE' : 'FALSE'},\n    ${esc(l.agentNote)}, ${esc(l.sazonalNote)}, ${esc(l.inicioCadencia)},\n    ${esc(l.ag2Status)}, ${escJ(l.ag2Reasoning || {})}, ${escJ(l.orderHistory || [])}\n  )`).join(',\\n');\n  parts.push(`INSERT INTO leads (\n    id,nome,seg,insta,site,canal,pot,capital,valor,agent,\n    tags,seguidores,engajamento,just,garg,insight,contatos,\n    stage,tabs,escopo,status_flags,data_captacao,proxima_acao,\n    retomar_contato,cadencia_pausada,agent_note,sazonal_note,\n    inicio_cadencia,ag2_status,ag2_reasoning,order_history\n  ) VALUES ${vals}\n  ON CONFLICT (id) DO UPDATE SET\n    nome=EXCLUDED.nome,seg=EXCLUDED.seg,insta=EXCLUDED.insta,site=EXCLUDED.site,\n    canal=EXCLUDED.canal,pot=EXCLUDED.pot,capital=EXCLUDED.capital,valor=EXCLUDED.valor,\n    agent=EXCLUDED.agent,tags=EXCLUDED.tags,seguidores=EXCLUDED.seguidores,\n    engajamento=EXCLUDED.engajamento,just=EXCLUDED.just,garg=EXCLUDED.garg,\n    insight=EXCLUDED.insight,contatos=EXCLUDED.contatos,stage=EXCLUDED.stage,\n    tabs=EXCLUDED.tabs,escopo=EXCLUDED.escopo,status_flags=EXCLUDED.status_flags,\n    data_captacao=EXCLUDED.data_captacao,proxima_acao=EXCLUDED.proxima_acao,\n    retomar_contato=EXCLUDED.retomar_contato,cadencia_pausada=EXCLUDED.cadencia_pausada,\n    agent_note=EXCLUDED.agent_note,sazonal_note=EXCLUDED.sazonal_note,\n    inicio_cadencia=EXCLUDED.inicio_cadencia,ag2_status=EXCLUDED.ag2_status,\n    ag2_reasoning=EXCLUDED.ag2_reasoning,order_history=EXCLUDED.order_history,\n    updated_at=NOW();`);\n}\n\n// ── cadencia_etapas ────────────────────────────────────────\nconst etapas = [];\nObject.entries(body.cadencia || {}).forEach(([lid, list]) => {\n  (list || []).forEach(e => etapas.push({...e, lead_id: Number(lid)}));\n});\nif (etapas.length) {\n  const vals = etapas.map(e => `(\n    ${esc(e.id)},${esc(e.lead_id)},${esc(e.et)},\n    ${esc(e.titulo||'')},${esc(e.canal||'instagram')},\n    ${esc(e.data)},${esc(e.status||'pendente')},\n    ${esc(e.roteiro)},${esc(e.motivo)},${esc(e.occ)},${e.locked?'TRUE':'FALSE'}\n  )`).join(',\\n');\n  parts.push(`INSERT INTO cadencia_etapas (id,lead_id,et,titulo,canal,data,status,roteiro,motivo,occ,locked)\n  VALUES ${vals}\n  ON CONFLICT (id) DO UPDATE SET\n    lead_id=EXCLUDED.lead_id,et=EXCLUDED.et,titulo=EXCLUDED.titulo,\n    canal=EXCLUDED.canal,data=EXCLUDED.data,status=EXCLUDED.status,\n    roteiro=EXCLUDED.roteiro,motivo=EXCLUDED.motivo,occ=EXCLUDED.occ,\n    locked=EXCLUDED.locked,updated_at=NOW();`);\n}\n\n// ── interacoes ─────────────────────────────────────────────\nconst intera = [];\nObject.entries(body.interacoes || {}).forEach(([lid, list]) => {\n  (list || []).forEach(i => intera.push({...i, lead_id: Number(lid)}));\n});\nif (intera.length) {\n  const vals = intera.map(i => `(\n    ${esc(i.id)},${esc(i.lead_id)},${esc(i.tipo)},\n    ${esc(i.canal)},${esc(i.data)},${esc(i.texto||'')},${i.aprovado?'TRUE':'FALSE'}\n  )`).join(',\\n');\n  parts.push(`INSERT INTO interacoes (id,lead_id,tipo,canal,data,texto,aprovado)\n  VALUES ${vals}\n  ON CONFLICT (id) DO UPDATE SET\n    lead_id=EXCLUDED.lead_id,tipo=EXCLUDED.tipo,canal=EXCLUDED.canal,\n    data=EXCLUDED.data,texto=EXCLUDED.texto,aprovado=EXCLUDED.aprovado;`);\n}\n\n// ── clientes_ativos ────────────────────────────────────────\nconst clientes = body.clientes || [];\nif (clientes.length) {\n  const vals = clientes.map(c => `(\n    ${esc(c.id)},${esc(c.nome)},${esc(c.seg)},${escArr(c.escopo||['ugc'])},\n    ${esc(c.status||'ativo')},${esc(c.inicio)},${esc(c.pacote)},\n    ${esc(c.valorPacote)},${esc(c.linkContrato)},${esc(c.entregaveis)},\n    ${escJ(c.contatos||[])},${escJ(c.historico||[])}\n  )`).join(',\\n');\n  parts.push(`INSERT INTO clientes_ativos (id,nome,seg,escopo,status,inicio,pacote,valor_pacote,link_contrato,entregaveis,contatos,historico)\n  VALUES ${vals}\n  ON CONFLICT (id) DO UPDATE SET\n    nome=EXCLUDED.nome,seg=EXCLUDED.seg,escopo=EXCLUDED.escopo,status=EXCLUDED.status,\n    inicio=EXCLUDED.inicio,pacote=EXCLUDED.pacote,valor_pacote=EXCLUDED.valor_pacote,\n    link_contrato=EXCLUDED.link_contrato,entregaveis=EXCLUDED.entregaveis,\n    contatos=EXCLUDED.contatos,historico=EXCLUDED.historico,updated_at=NOW();`);\n}\n\n// ── calls_agendadas ────────────────────────────────────────\nconst calls = body.calls || [];\nif (calls.length) {\n  const vals = calls.map(c => `(\n    ${esc(c.id)},${esc(c.leadId)},${esc(c.nome)},${esc(c.data)},\n    ${esc(c.hora)},${esc(c.canal)},${esc(c.intuito)},${esc(c.status||'agendado')}\n  )`).join(',\\n');\n  parts.push(`INSERT INTO calls_agendadas (id,lead_id,nome,data,hora,canal,intuito,status)\n  VALUES ${vals}\n  ON CONFLICT (id) DO UPDATE SET\n    lead_id=EXCLUDED.lead_id,nome=EXCLUDED.nome,data=EXCLUDED.data,\n    hora=EXCLUDED.hora,canal=EXCLUDED.canal,intuito=EXCLUDED.intuito,status=EXCLUDED.status;`);\n}\n\n// ── crm_global_state ───────────────────────────────────────\nconst gs = body.globalState || {};\nparts.push(`INSERT INTO crm_global_state (\n  id,nicho_custom,pl_checked,pl_lead_comments,\n  pl_global_cmd_text,aprov_master_text,aprov_etapa_cmd,aprov_reprocess\n) VALUES (\n  1,\n  ${escJ(gs.nichoCustom||{})},\n  ${escJ(gs.plChecked||{})},\n  ${escJ(gs.plLeadComments||{})},\n  ${esc(gs.plGlobalCmdText||'')},\n  ${esc(gs.aprovMasterText||'')},\n  ${escJ(gs.aprovEtapaCmd||{})},\n  ${escJ(gs.aprovReprocess||{})}\n)\nON CONFLICT (id) DO UPDATE SET\n  nicho_custom=EXCLUDED.nicho_custom,pl_checked=EXCLUDED.pl_checked,\n  pl_lead_comments=EXCLUDED.pl_lead_comments,pl_global_cmd_text=EXCLUDED.pl_global_cmd_text,\n  aprov_master_text=EXCLUDED.aprov_master_text,aprov_etapa_cmd=EXCLUDED.aprov_etapa_cmd,\n  aprov_reprocess=EXCLUDED.aprov_reprocess,updated_at=NOW();`);\n\nif (!parts.length) return [{ json: { sql: 'SELECT 1' } }];\nreturn [{ json: { sql: parts.join('\\n\\n') } }];"
+      },
+      "id": "f1a2b3c4-2222-2222-2222-000000000002",
+      "name": "Code — SQL Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "f1a2b3c4-3333-3333-3333-000000000003",
+      "name": "Postgres — Upsert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [700, 300],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Render PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"ts\": \"{{ new Date().toISOString() }}\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f1a2b3c4-4444-4444-4444-000000000004",
+      "name": "Respond — Push OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [950, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "crm-pull",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f1a2b3c4-5555-5555-5555-000000000005",
+      "name": "Webhook — Pull",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 600]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT 'leads'            AS _t, row_to_json(r) AS d FROM leads            r UNION ALL\nSELECT 'cadencia_etapas'  AS _t, row_to_json(r) AS d FROM cadencia_etapas  r UNION ALL\nSELECT 'interacoes'       AS _t, row_to_json(r) AS d FROM interacoes        r UNION ALL\nSELECT 'clientes_ativos'  AS _t, row_to_json(r) AS d FROM clientes_ativos   r UNION ALL\nSELECT 'calls_agendadas'  AS _t, row_to_json(r) AS d FROM calls_agendadas   r UNION ALL\nSELECT 'crm_global_state' AS _t, row_to_json(r) AS d FROM crm_global_state  r;",
+        "options": {}
+      },
+      "id": "f1a2b3c4-6666-6666-6666-000000000006",
+      "name": "Postgres — Select Tudo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [450, 600],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Render PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agrupa as linhas retornadas pelo UNION ALL em coleções por tabela.\nconst result = {\n  leads: [],\n  cadencia_etapas: [],\n  interacoes: [],\n  clientes_ativos: [],\n  calls_agendadas: [],\n  crm_global_state: null,\n};\n\nfor (const item of $input.all()) {\n  const t = item.json._t;\n  const d = typeof item.json.d === 'string' ? JSON.parse(item.json.d) : item.json.d;\n  if (!d) continue;\n  if (t === 'crm_global_state') {\n    result.crm_global_state = d;\n  } else if (Array.isArray(result[t])) {\n    result[t].push(d);\n  }\n}\n\nreturn [{ json: result }];"
+      },
+      "id": "f1a2b3c4-7777-7777-7777-000000000007",
+      "name": "Code — Montar Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f1a2b3c4-8888-8888-8888-000000000008",
+      "name": "Respond — Pull Data",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [950, 600]
+    }
+  ],
+  "connections": {
+    "Webhook — Push": {
+      "main": [[{ "node": "Code — SQL Builder", "type": "main", "index": 0 }]]
+    },
+    "Code — SQL Builder": {
+      "main": [[{ "node": "Postgres — Upsert", "type": "main", "index": 0 }]]
+    },
+    "Postgres — Upsert": {
+      "main": [[{ "node": "Respond — Push OK", "type": "main", "index": 0 }]]
+    },
+    "Webhook — Pull": {
+      "main": [[{ "node": "Postgres — Select Tudo", "type": "main", "index": 0 }]]
+    },
+    "Postgres — Select Tudo": {
+      "main": [[{ "node": "Code — Montar Resposta", "type": "main", "index": 0 }]]
+    },
+    "Code — Montar Resposta": {
+      "main": [[{ "node": "Respond — Pull Data", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
