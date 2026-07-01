@@ -1149,6 +1149,68 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
   /* ── Raio-X stats 2 colunas → 1 ── */
   .raiox-stats-grid{grid-template-columns:1fr!important}
 }
+
+/* ══ TELA DE LOGIN ══════════════════════════════ */
+#login-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--cream);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;
+  font-family:inherit;
+}
+#login-screen.hidden{display:none}
+.login-box{
+  background:var(--cream);
+  border-radius:var(--r-xl);
+  box-shadow:14px 14px 44px #C8BEA8,-8px -8px 30px #FFFFFF;
+  padding:36px 36px 32px;
+  width:100%;max-width:360px;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+.login-logo{
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue-p),var(--blue));
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-bottom:16px;
+  box-shadow:6px 6px 18px #C8BEA8,-4px -4px 12px #FFFFFF;
+}
+.login-title{font-size:20px;font-weight:900;color:var(--txt);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--txt-s);margin-bottom:28px}
+.login-field{
+  width:100%;margin-bottom:12px;
+}
+.login-field label{
+  display:block;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;
+  color:var(--txt-s);margin-bottom:5px;
+}
+.login-field input{
+  width:100%;box-sizing:border-box;
+  padding:11px 14px;border:none;border-radius:var(--r-md);
+  background:var(--cream-d);box-shadow:var(--sh-in);
+  font-size:13px;font-family:inherit;color:var(--txt);outline:none;
+  transition:box-shadow .18s;
+}
+.login-field input:focus{
+  box-shadow:inset 3px 3px 8px #CCC5B0,inset -2px -2px 6px #FFF,0 0 0 2px var(--blue);
+}
+.login-btn{
+  margin-top:8px;width:100%;padding:13px;
+  border:none;border-radius:var(--r-lg);
+  background:var(--blue);color:#fff;
+  font-size:13px;font-weight:800;font-family:inherit;
+  cursor:pointer;transition:all .2s;
+  box-shadow:4px 4px 14px rgba(94,129,244,.35);
+}
+.login-btn:hover{background:var(--blue-d);box-shadow:6px 6px 18px rgba(94,129,244,.45)}
+.login-btn:active{transform:scale(.97)}
+.login-err{
+  font-size:11px;color:#D94F4F;font-weight:700;
+  min-height:18px;margin-top:6px;text-align:center;
+}
+@media(max-width:768px){
+  .login-box{max-width:calc(100vw - 40px);padding:28px 22px 24px}
+}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#F5F0E8">
@@ -1158,7 +1220,29 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
 <meta name="apple-mobile-web-app-title" content="UGC Mestre">
 </head>
 <body>
-<div class="app">
+
+<!-- ══ TELA DE LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">✦</div>
+    <div class="login-title">UGC Mestre</div>
+    <div class="login-sub">Acesso restrito — faça login para continuar</div>
+    <div class="login-field">
+      <label>Usuário</label>
+      <input type="text" id="login-user" autocomplete="username" placeholder="Usuário"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="login-pass" autocomplete="current-password" placeholder="Senha"
+        onkeydown="if(event.key==='Enter')loginSubmit()">
+    </div>
+    <button class="login-btn" onclick="loginSubmit()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<div class="app" id="crm-app" style="display:none">
 
 <!-- ══ SIDEBAR ══════════════════════════════════════ -->
 <aside class="sidebar" id="sidebar">
@@ -6602,6 +6686,46 @@ function initAg2StatusWatcher() {
   tick(); // check immediately on load
   setInterval(tick, 30000); // re-check every 30s
 }
+
+/* ═══════════════════════════════════════
+   AUTH
+═══════════════════════════════════════ */
+(async function initAuth() {
+  const USER_HASH = '8ca6e4ca1938db8f83bd6cd02d4b0b25a5cc6696d7e5c84e5fdfe1c58b51c1ee'; // sha256('Isis')
+  const PASS_HASH = 'b59c7e3eaf2dee51b7c7c6bcff77dabe4d07d8fb2a4cb67e218abf97fa09b1c2'; // sha256('Lucyrebua2@')
+  const SESSION_KEY = '_crm_auth';
+
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function showApp() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('crm-app').style.display = '';
+  }
+
+  window.loginSubmit = async function() {
+    const u = document.getElementById('login-user').value.trim();
+    const p = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-err');
+    errEl.textContent = '';
+    if (!u || !p) { errEl.textContent = 'Preencha usuário e senha.'; return; }
+    const [uh, ph] = await Promise.all([sha256(u), sha256(p)]);
+    if (uh === USER_HASH && ph === PASS_HASH) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      showApp();
+    } else {
+      errEl.textContent = 'Usuário ou senha incorretos.';
+      document.getElementById('login-pass').value = '';
+      document.getElementById('login-pass').focus();
+    }
+  };
+
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    showApp();
+  }
+})();
 
 /* ═══════════════════════════════════════
    INIT
