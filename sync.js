@@ -74,27 +74,27 @@
   }
 
   /* ══════════════════════════════════════════════
-     3. HTTP — n8n WEBHOOK
+     3. HTTP — VERCEL API
   ══════════════════════════════════════════════ */
 
-  function _n8nUrl(path) {
+  function _apiUrl(path) {
     const { n8nUrl } = getConfig();
-    return `${n8nUrl.replace(/\/$/, '')}/webhook/${path}`;
+    return `${n8nUrl.replace(/\/$/, '')}/api/${path}`;
   }
 
   async function _n8nPost(path, body) {
-    const res = await fetch(_n8nUrl(path), {
+    const res = await fetch(_apiUrl(path), {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`n8n ${path}: HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`API ${path}: HTTP ${res.status}`);
     return res.json();
   }
 
   async function _n8nGet(path) {
-    const res = await fetch(_n8nUrl(path));
-    if (!res.ok) throw new Error(`n8n ${path}: HTTP ${res.status}`);
+    const res = await fetch(_apiUrl(path));
+    if (!res.ok) throw new Error(`API ${path}: HTTP ${res.status}`);
     return res.json();
   }
 
@@ -222,7 +222,7 @@
 
     try {
       const payload = _buildPushPayload();
-      await _n8nPost('crm-push', payload);
+      await _n8nPost('crm-push', payload);  // → /api/crm-push
       _log('✅ Sincronização completa com a nuvem.', 'ok');
     } catch (err) {
       _log(`❌ Erro ao sincronizar: ${err.message}`, 'error');
@@ -241,7 +241,7 @@
 
     _updateSyncBadge('syncing');
     try {
-      const data = await _n8nGet('crm-pull');
+      const data = await _n8nGet('crm-pull');  // → /api/crm-pull
 
       if (!data || !(data.leads || []).length) {
         _log('Nuvem vazia — mantendo dados locais.', 'ok');
@@ -312,11 +312,11 @@
             style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--txt-s,#888)">✕</button>
         </div>
         <p style="font-size:11px;color:var(--txt-s,#888);margin:0 0 16px;line-height:1.6">
-          Cole a URL base do seu <strong>n8n</strong> na Render.<br>
-          Ex: <code>https://n8n-ugc-mestre.onrender.com</code>
+          Cole a URL do seu projeto na <strong>Vercel</strong>.<br>
+          Ex: <code>https://ugc-mestre-crm.vercel.app</code>
         </p>
-        <label style="font-size:10px;font-weight:700;color:var(--txt-s,#888);text-transform:uppercase;letter-spacing:.06em">URL do n8n</label>
-        <input id="sync-url-inp" placeholder="https://n8n-ugc-mestre.onrender.com"
+        <label style="font-size:10px;font-weight:700;color:var(--txt-s,#888);text-transform:uppercase;letter-spacing:.06em">URL da Vercel</label>
+        <input id="sync-url-inp" placeholder="https://ugc-mestre-crm.vercel.app"
           style="width:100%;box-sizing:border-box;margin:4px 0 18px;padding:9px 12px;border:none;border-radius:10px;background:var(--cream-d,#EBE5D8);font-size:12px;font-family:inherit;outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.08)"/>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button onclick="CRMSync.saveConfig()"
@@ -371,9 +371,9 @@
       const log = document.getElementById('sync-modal-log');
       if (log) log.textContent = 'Testando conexão com n8n…';
       try {
-        const res = await fetch(`${getConfig().n8nUrl.replace(/\/$/, '')}/webhook/crm-pull`);
+        const res = await fetch(`${getConfig().n8nUrl.replace(/\/$/, '')}/api/crm-pull`);
         if (res.ok) {
-          const msg = '✅ n8n respondeu! Conexão OK.';
+          const msg = '✅ Vercel API respondeu! Conexão OK.';
           if (log) log.textContent = msg;
           _log(msg, 'ok');
         } else {
