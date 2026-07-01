@@ -1388,6 +1388,7 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
         <input class="search-bar" id="search-inp" placeholder="Buscar marca, nicho..." oninput="doSearch(this.value)"/>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="openModal()">+ Novo Lead</button>
+      <button class="btn btn-ghost btn-sm" onclick="authLogout()" title="Sair" style="color:var(--txt-s)">Sair</button>
     </div>
   </div>
 
@@ -6713,7 +6714,7 @@ function initAg2StatusWatcher() {
     if (!u || !p) { errEl.textContent = 'Preencha usuário e senha.'; return; }
     const [uh, ph] = await Promise.all([sha256(u), sha256(p)]);
     if (uh === USER_HASH && ph === PASS_HASH) {
-      sessionStorage.setItem(SESSION_KEY, '1');
+      localStorage.setItem(SESSION_KEY, '1');
       showApp();
     } else {
       errEl.textContent = 'Usuário ou senha incorretos.';
@@ -6722,7 +6723,12 @@ function initAg2StatusWatcher() {
     }
   };
 
-  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+  window.authLogout = function() {
+    localStorage.removeItem(SESSION_KEY);
+    location.reload();
+  };
+
+  if (localStorage.getItem(SESSION_KEY) === '1') {
     showApp();
   }
 })();
