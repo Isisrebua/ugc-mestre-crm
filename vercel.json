@@ -3,9 +3,10 @@
   "buildCommand": "",
   "outputDirectory": ".",
   "functions": {
-    "api/crm-push.js": { "maxDuration": 30 },
-    "api/crm-pull.js": { "maxDuration": 30 },
-    "api/hunter.js":   { "maxDuration": 30 }
+    "api/crm-push.js":       { "maxDuration": 30 },
+    "api/crm-pull.js":       { "maxDuration": 30 },
+    "api/hunter.js":         { "maxDuration": 30 },
+    "api/apify-webhook.js":  { "maxDuration": 60 }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
