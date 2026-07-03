@@ -4,7 +4,8 @@
   "outputDirectory": ".",
   "functions": {
     "api/crm-push.js": { "maxDuration": 30 },
-    "api/crm-pull.js": { "maxDuration": 30 }
+    "api/crm-pull.js": { "maxDuration": 30 },
+    "api/hunter.js":   { "maxDuration": 30 }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
