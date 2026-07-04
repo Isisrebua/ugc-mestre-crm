@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   }
 
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL_EXTERNAL,
     ssl: { rejectUnauthorized: false },
   });
 
