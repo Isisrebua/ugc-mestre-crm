@@ -1400,6 +1400,7 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
         <input class="search-bar" id="search-inp" placeholder="Buscar marca, nicho..." oninput="doSearch(this.value)"/>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="openModal()">+ Novo Lead</button>
+      <button class="btn btn-ghost btn-sm" id="cloud-sync-btn" onclick="syncFromCloud()" title="Buscar dados do banco e atualizar tela">🔄 Sincronizar</button>
       <button class="btn btn-ghost btn-sm" onclick="authLogout()" title="Sair" style="color:var(--txt-s)">Sair</button>
     </div>
   </div>
@@ -6767,6 +6768,86 @@ function initAg2StatusWatcher() {
   }
   tick(); // check immediately on load
   setInterval(tick, 30000); // re-check every 30s
+}
+
+/* ═══════════════════════════════════════
+   SYNC DIRETO COM BANCO (sem sync.js)
+═══════════════════════════════════════ */
+async function syncFromCloud() {
+  const btn = document.getElementById('cloud-sync-btn');
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Buscando...';
+  btn.disabled = true;
+
+  try {
+    const r = await fetch('https://ugc-mestre-crm.vercel.app/api/crm-pull');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+
+    const leads = data.leads || [];
+
+    // Mapeia snake_case do banco → camelCase do CRM
+    Leads_Geral = leads.map(row => ({
+      id:              row.id,
+      nome:            row.nome,
+      seg:             row.seg,
+      insta:           row.insta,
+      site:            row.site,
+      canal:           row.canal,
+      pot:             row.pot,
+      capital:         row.capital,
+      valor:           row.valor,
+      agent:           row.agent,
+      tags:            row.tags            || [],
+      seguidores:      row.seguidores,
+      engajamento:     row.engajamento,
+      just:            row.just,
+      garg:            row.garg,
+      insight:         row.insight,
+      contatos:        (typeof row.contatos === 'string' ? JSON.parse(row.contatos) : row.contatos) || [],
+      stage:           row.stage,
+      tabs:            row.tabs            || [row.stage],
+      escopo:          row.escopo          || ['ugc'],
+      statusFlags:     row.status_flags    || [],
+      dataCaptacao:    row.data_captacao,
+      proximaAcao:     row.proxima_acao,
+      retomarContato:  row.retomar_contato,
+      cadenciaPausada: row.cadencia_pausada || false,
+      agentNote:       row.agent_note,
+      sazonalNote:     row.sazonal_note,
+      inicioCadencia:  row.inicio_cadencia,
+      ag2Status:       row.ag2_status,
+      ag2Reasoning:    (typeof row.ag2_reasoning === 'string' ? JSON.parse(row.ag2_reasoning) : row.ag2_reasoning) || {},
+      orderHistory:    (typeof row.order_history  === 'string' ? JSON.parse(row.order_history)  : row.order_history)  || [],
+    }));
+
+    // Cadência
+    Cadencia = {};
+    (data.cadencia_etapas || []).forEach(row => {
+      if (!Cadencia[row.lead_id]) Cadencia[row.lead_id] = [];
+      Cadencia[row.lead_id].push({ id:row.id, et:row.et, titulo:row.titulo, canal:row.canal,
+        data:row.data, status:row.status, roteiro:row.roteiro, motivo:row.motivo, occ:row.occ, locked:row.locked });
+    });
+
+    // Clientes e Calls
+    Clientes_Ativos = data.clientes_ativos || [];
+    CallsAgendadas  = (data.calls_agendadas || []).map(c => ({
+      id:c.id, leadId:c.lead_id, nome:c.nome, data:c.data,
+      hora:c.hora, canal:c.canal, intuito:c.intuito, status:c.status,
+    }));
+
+    _saveAll();
+    updateBadges();
+    renderPage(currentPage);
+
+    btn.textContent = leads.length ? `✅ ${leads.length} lead(s) carregados` : '☁️ Banco vazio';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
+
+  } catch (err) {
+    btn.textContent = '❌ ' + err.message;
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = orig; }, 4000);
+  }
 }
 
 /* ═══════════════════════════════════════
