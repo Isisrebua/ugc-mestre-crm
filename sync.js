@@ -419,7 +419,19 @@
      10. INICIALIZAÇÃO
   ══════════════════════════════════════════════ */
 
+  const DEFAULT_VERCEL_URL = 'https://ugc-mestre-crm.vercel.app';
+
+  function _ensureDefaultConfig() {
+    const cfg = getConfig();
+    if (!cfg.n8nUrl) {
+      setConfig({ n8nUrl: DEFAULT_VERCEL_URL, enabled: true });
+    } else if (!cfg.enabled) {
+      // URL já salva mas desabilitada — não forçar reativação
+    }
+  }
+
   function init() {
+    _ensureDefaultConfig();
     _injectSyncUI();
     _hookSaveAll();
 
@@ -432,6 +444,7 @@
       if (pulled && typeof window.renderVisaoGeral === 'function') {
         window.renderVisaoGeral();
         if (typeof window.updateBadges === 'function') window.updateBadges();
+        if (typeof window.renderPage    === 'function') window.renderPage(window.currentPage);
       }
     });
   }
