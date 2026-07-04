@@ -131,7 +131,7 @@ export async function insertLead(client, lead) {
       ${esc(today)},
       NULL, NULL, FALSE,
       ${esc(`Minerado pelo Agente 1 via ${source || 'agente'}`)},
-      NULL, NULL, 'pendente',
+      NULL, NULL, NULL,
       ${escJ({ source: source || null, metaAds: !!metaAds, linkedin: linkedin || null, rawData: rawData || {} })},
       ${escJ([])}
     )
