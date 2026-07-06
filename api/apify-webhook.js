@@ -36,6 +36,8 @@ export const config = { maxDuration: 60 };
 const ACTOR_NORMALIZERS = {
   // apify/instagram-profile-scraper
   'dSCLg0C3YEZ83HzYX': normalizeInstagram,
+  // apify/instagram-hashtag-scraper (disparado pelo Agente 1)
+  'reGe1ST3OBgYZSsZJ': normalizeInstagramHashtag,
   // compass/crawler-google-places (Google Maps Scraper)
   'nwua9Gu5YrADL7ZDj': normalizeGoogleMaps,
   // lukaskrivka/google-maps-with-contact-details (Maps + Email)
@@ -90,6 +92,48 @@ function normalizeInstagram(item) {
       isVerified:      item.isVerified,
       postsCount:      item.postsCount,
       followingCount:  item.followingCount,
+    },
+  };
+}
+
+// apify/instagram-hashtag-scraper
+// Campos: ownerUsername, ownerFullName, caption, likesCount, commentsCount,
+//         videoViewCount, url, timestamp, hashtags, locationName
+// Retorna POSTS — extraímos as contas únicas como leads
+function normalizeInstagramHashtag(item) {
+  const username = item.ownerUsername || item.ownerId;
+  if (!username) return null;
+
+  const nome = item.ownerFullName || item.ownerUsername;
+  if (!nome) return null;
+
+  // Estima engajamento pelo post coletado
+  const likes    = item.likesCount    || 0;
+  const comments = item.commentsCount || 0;
+  const views    = item.videoViewCount|| 0;
+  const engRef   = views || likes;
+  const engStr   = engRef > 0
+    ? engRef >= 1000 ? `${Math.round(engRef / 1000)}k interações` : `${engRef} interações`
+    : null;
+
+  const hashtags = (item.hashtags || []).slice(0, 5).join(', ');
+
+  return {
+    nome,
+    insta:  `@${username}`,
+    seg:    item.locationName || 'Instagram',
+    pot:    (likes + comments) > 500 ? 'alto' : 'medio',
+    just:   item.caption
+      ? `Post via hashtag: "${item.caption.slice(0, 180)}"${hashtags ? ` | hashtags: ${hashtags}` : ''}`
+      : `Conta encontrada via busca de hashtag`,
+    engajamento: engStr,
+    tags:   ['instagram', 'hashtag', ...(item.hashtags || []).slice(0, 3)],
+    rawData: {
+      postUrl:    item.url,
+      timestamp:  item.timestamp,
+      likesCount: likes,
+      commentsCount: comments,
+      videoViewCount: views,
     },
   };
 }
@@ -250,14 +294,14 @@ export default async function handler(req, res) {
 
   // ── Escolher normalizador ─────────────────────────────────────────────────
   const normalize = (actId && ACTOR_NORMALIZERS[actId]) || normalizeGeneric;
-  const source    = actId
-    ? Object.keys(ACTOR_NORMALIZERS).includes(actId)
-      ? actId === 'dSCLg0C3YEZ83HzYX' ? 'instagram'
-        : actId === 'nwua9Gu5YrADL7ZDj' || actId === 'WnMxbsRLNbPeYL6ge' ? 'google_maps'
-        : actId === 'UwSdACBp7ymaGUJjS' ? 'linkedin'
-        : 'apify'
-      : 'apify'
-    : 'apify';
+  const SOURCE_LABELS = {
+    'dSCLg0C3YEZ83HzYX': 'instagram',
+    'reGe1ST3OBgYZSsZJ': 'instagram_hashtag',
+    'nwua9Gu5YrADL7ZDj': 'google_maps',
+    'WnMxbsRLNbPeYL6ge': 'google_maps',
+    'UwSdACBp7ymaGUJjS': 'linkedin',
+  };
+  const source = (actId && SOURCE_LABELS[actId]) || 'apify';
 
   // ── Conectar ao banco e inserir ───────────────────────────────────────────
   const client = new Client({
