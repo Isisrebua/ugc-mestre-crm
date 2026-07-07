@@ -79,17 +79,13 @@ const ACTORS = {
 // ── Disparo via Apify REST API ────────────────────────────────────────────────
 async function triggerApifyRun({ actorId, input, webhookUrl, memory, timeout }) {
   // Codifica webhook em base64 para passar na query string
+  // Sem payloadTemplate — usa o payload padrão do Apify, que já inclui
+  // resource.actId, resource.defaultDatasetId e todos os campos necessários.
+  // Um payloadTemplate customizado com {{resource.id}} sem aspas geraria
+  // JSON inválido (valores string sem quotes), fazendo o Apify descartar silenciosamente.
   const webhookPayload = JSON.stringify([{
-    eventTypes:  ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
-    requestUrl:  webhookUrl,
-    payloadTemplate: `{
-      "resource": {
-        "id":               {{resource.id}},
-        "actId":            {{resource.actId}},
-        "status":           {{resource.status}},
-        "defaultDatasetId": {{resource.defaultDatasetId}}
-      }
-    }`,
+    eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
+    requestUrl: webhookUrl,
   }]);
 
   const webhooksB64 = Buffer.from(webhookPayload).toString('base64');
