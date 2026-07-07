@@ -1,0 +1,136 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "UGC Mestre — Agente 1 (Caçador de Leads)",
+    "description": "Dispara minerações automáticas no Apify por nicho, hashtag ou localização. Os leads coletados entram automaticamente na Pré-Lista do CRM após passar pelo filtro de duplicatas.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://ugc-mestre-crm.vercel.app"
+    }
+  ],
+  "paths": {
+    "/api/agent1-hunt": {
+      "post": {
+        "operationId": "dispararMineracaoLeads",
+        "summary": "Dispara uma mineração de leads no Apify",
+        "description": "O Agente 1 recebe o comando da Ísis (nicho, canal, quantidade) e dispara um Ator no Apify. Quando a mineração terminar, os leads chegam automaticamente na Pré-Lista do CRM. A resposta é imediata — o runId permite acompanhar pelo Apify Console.",
+        "security": [
+          { "HunterSecret": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["source", "nicho"],
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "enum": ["instagram", "google_maps", "linkedin"],
+                    "description": "Canal de mineração. Use 'instagram' para busca por hashtag, 'google_maps' para negócios locais, 'linkedin' para empresas."
+                  },
+                  "nicho": {
+                    "type": "string",
+                    "description": "Nicho ou segmento alvo. Ex: 'Cosméticos Naturais', 'Academia de Ginástica', 'Restaurante Vegano'."
+                  },
+                  "hashtag": {
+                    "type": "string",
+                    "description": "Hashtag para busca no Instagram (sem o #). Se omitido, usa o nicho como hashtag. Ex: 'cosmeticosbrasileiros'."
+                  },
+                  "localizacao": {
+                    "type": "string",
+                    "description": "Localização para busca no Google Maps. Ex: 'São Paulo, SP', 'Rio de Janeiro, Brasil'. Padrão: 'Brasil'."
+                  },
+                  "limite": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 30,
+                    "description": "Número máximo de resultados a coletar. Recomendado: 20–50 para testes, até 200 para varreduras completas."
+                  },
+                  "memoria": {
+                    "type": "integer",
+                    "default": 512,
+                    "description": "RAM em MB para o Ator Apify. Padrão 512MB é suficiente para a maioria das buscas."
+                  }
+                }
+              },
+              "examples": {
+                "instagram_hashtag": {
+                  "summary": "Instagram — busca por hashtag",
+                  "value": {
+                    "source": "instagram",
+                    "nicho": "Cosméticos Naturais",
+                    "hashtag": "cosmeticosnaturais",
+                    "limite": 50
+                  }
+                },
+                "google_maps_local": {
+                  "summary": "Google Maps — negócios em SP",
+                  "value": {
+                    "source": "google_maps",
+                    "nicho": "Loja de Roupas Femininas",
+                    "localizacao": "São Paulo, SP",
+                    "limite": 30
+                  }
+                },
+                "linkedin_empresas": {
+                  "summary": "LinkedIn — empresas por setor",
+                  "value": {
+                    "source": "linkedin",
+                    "nicho": "Moda Feminina",
+                    "limite": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ator disparado com sucesso. Os leads chegarão na Pré-Lista automaticamente quando a mineração terminar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok":          { "type": "boolean" },
+                    "runId":       { "type": "string", "description": "ID da corrida no Apify" },
+                    "actorName":   { "type": "string", "description": "Nome do Ator usado" },
+                    "source":      { "type": "string" },
+                    "status":      { "type": "string", "description": "Status inicial: READY ou RUNNING" },
+                    "input":       { "type": "object", "description": "Parâmetros enviados ao Ator" },
+                    "apifyRunUrl": { "type": "string", "description": "Link direto para acompanhar no Apify Console" },
+                    "message":     { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parâmetros inválidos (source desconhecido ou nicho ausente)"
+          },
+          "401": {
+            "description": "Token de autenticação inválido"
+          },
+          "502": {
+            "description": "Erro ao comunicar com a API do Apify"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "HunterSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Hunter-Secret",
+        "description": "Segredo de autenticação. Configurado na variável HUNTER_SECRET da Vercel."
+      }
+    }
+  }
+}

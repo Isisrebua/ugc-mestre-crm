@@ -2694,7 +2694,7 @@ function plClearAll() {
 }
 
 function sendPreListaBatch() {
-  /* move aprovados → qualificado; assign inicioCadencia 24h from now */
+  /* 1. move aprovados → qualificado localmente */
   const now = new Date();
   Object.entries(plChecked).forEach(([id, dest]) => {
     if (dest === 'aprovado') {
@@ -2710,6 +2710,13 @@ function sendPreListaBatch() {
       }
     }
   });
+
+  /* 2. Se há instrução de busca escrita, dispara o Agente 1 via API */
+  const instrucao = (plGlobalCmdText || '').trim();
+  if (instrucao) {
+    _dispararAgente1(instrucao);
+  }
+
   plChecked = {};
   plGlobalCmdText = '';
   plLeadComments  = {};
@@ -2719,12 +2726,102 @@ function sendPreListaBatch() {
   updateBadges();
   const btn = document.querySelector('[onclick="sendPreListaBatch()"]');
   if (btn) {
-    btn.textContent = '✓ Despacho Enviado!';
-    btn.style.background = 'linear-gradient(135deg,var(--mint),var(--mint-d))';
-    btn.style.color = '#1A6B45';
-    setTimeout(() => { btn.textContent = '📤 Enviar Instruções · Agente 1'; btn.style.background = ''; btn.style.color = ''; }, 2200);
+    btn.textContent = instrucao ? '🤖 Agente 1 em ação…' : '✓ Despacho Enviado!';
+    btn.style.background = instrucao
+      ? 'linear-gradient(135deg,#9B7FD4,#7C5FC8)'
+      : 'linear-gradient(135deg,var(--mint),var(--mint-d))';
+    btn.style.color = '#fff';
+    btn.disabled = !!instrucao;
+    if (!instrucao) {
+      setTimeout(() => { btn.textContent = '📤 Enviar Instruções · Agente 1'; btn.style.background = ''; btn.style.color = ''; btn.disabled = false; }, 2200);
+    }
   }
   renderPreLista();
+}
+
+async function _dispararAgente1(instrucao) {
+  /* Monta contexto atual do CRM para o Agente ter mais contexto */
+  const prelista = Leads_Geral.filter(l => l.stage === 'prelista');
+  const contexto = {
+    totalLeads:   Leads_Geral.length,
+    totalPrelista: prelista.length,
+    nichosFoco:   [...new Set(Leads_Geral.map(l => l.seg).filter(Boolean))].slice(0, 10),
+    ultimosNichos: [...new Set(prelista.map(l => l.seg).filter(Boolean))].slice(0, 5),
+  };
+
+  const cfg = getConfig ? getConfig() : {};
+  const base = (cfg.n8nUrl || 'https://ugc-mestre-crm.vercel.app').replace(/\/$/, '');
+
+  let resposta;
+  try {
+    const r = await fetch(`${base}/api/agent1-think`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':    'application/json',
+        'X-Hunter-Secret': cfg.hunterSecret || 'Lucyrebua2@',
+      },
+      body: JSON.stringify({ instrucao, contexto }),
+    });
+    resposta = await r.json();
+  } catch (err) {
+    _agente1Toast(`❌ Erro ao contatar o Agente 1: ${err.message}`, 'erro');
+    _resetBatchBtn();
+    return;
+  }
+
+  if (!resposta.ok) {
+    _agente1Toast(`⚠️ Agente 1: ${resposta.mensagem || resposta.error || 'Resposta inválida'}`, 'aviso');
+    _resetBatchBtn();
+    return;
+  }
+
+  const d = resposta.decisao || {};
+  const canal = { instagram:'Instagram 📸', google_maps:'Google Maps 📍', linkedin:'LinkedIn 💼' }[d.source] || d.source;
+  _agente1Toast(
+    `✅ Agente 1 disparou! Minerando <b>${d.nicho}</b> via ${canal} · ${d.limite} resultados.<br>` +
+    `<small style="opacity:.8">Os leads chegam automaticamente na Pré-Lista.</small>`,
+    'sucesso'
+  );
+  _resetBatchBtn();
+}
+
+function _resetBatchBtn() {
+  const btn = document.querySelector('[onclick="sendPreListaBatch()"]');
+  if (btn) {
+    setTimeout(() => {
+      btn.textContent = '📤 Enviar Instruções · Agente 1';
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.disabled = false;
+    }, 3000);
+  }
+}
+
+function _agente1Toast(html, tipo) {
+  /* Remove toast anterior se existir */
+  const old = document.getElementById('agente1-toast');
+  if (old) old.remove();
+
+  const cores = {
+    sucesso: { bg:'#EDF7F0', border:'var(--mint-d)', icon:'✅' },
+    aviso:   { bg:'#FFFBEA', border:'#B8860B',       icon:'⚠️' },
+    erro:    { bg:'#FEF2F2', border:'#C0392B',       icon:'❌' },
+  };
+  const c = cores[tipo] || cores.aviso;
+
+  const el = document.createElement('div');
+  el.id = 'agente1-toast';
+  el.style.cssText = `
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:${c.bg};border:1.5px solid ${c.border};border-radius:12px;
+    padding:12px 18px;font-size:12px;line-height:1.5;color:var(--txt);
+    box-shadow:0 4px 20px rgba(0,0,0,.13);z-index:9999;
+    max-width:calc(100vw - 32px);text-align:center;
+    animation:fadeIn .25s ease;
+  `;
+  el.innerHTML = html;
+  document.body.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, 6000);
 }
 
 /* ── Lead row exclusivo da Pré-Lista ── */
