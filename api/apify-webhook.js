@@ -312,9 +312,10 @@ export default async function handler(req, res) {
   try {
     await client.connect();
 
-    const details  = [];
-    let inserted   = 0;
-    let skipped    = 0;
+    const details       = [];
+    const insertedLeads = [];  // leads novos para análise automática
+    let inserted        = 0;
+    let skipped         = 0;
 
     for (const item of items) {
       const normalized = normalize(item);
@@ -329,6 +330,7 @@ export default async function handler(req, res) {
 
       if (result.inserted) {
         details.push({ nome: result.nome, status: 'inserted', id: result.id });
+        insertedLeads.push({ ...normalized, id: result.id });
         inserted++;
       } else {
         details.push({ nome: normalized.nome, status: 'duplicate', reason: result.reason });
@@ -336,16 +338,35 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── Dispara análise automática em background ──────────────────────────────
+    // Fire-and-forget: não bloqueamos a resposta do webhook.
+    // O agent1-analyze roda de forma independente e enriquece os leads no banco.
+    if (insertedLeads.length > 0) {
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://ugc-mestre-crm.vercel.app';
+
+      fetch(`${baseUrl}/api/agent1-analyze`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':    'application/json',
+          'X-Hunter-Secret': process.env.HUNTER_SECRET || '',
+        },
+        body: JSON.stringify({ leads: insertedLeads }),
+      }).catch(err => console.error('[apify-webhook] Falha ao disparar agent1-analyze:', err.message));
+    }
+
     return res.status(200).json({
-      ok:       true,
+      ok:        true,
       source,
-      actorId:  actId,
+      actorId:   actId,
       datasetId,
-      total:    items.length,
+      total:     items.length,
       inserted,
       skipped,
+      analyzing: insertedLeads.length,
       details,
-      ts:       new Date().toISOString(),
+      ts:        new Date().toISOString(),
     });
 
   } catch (err) {
