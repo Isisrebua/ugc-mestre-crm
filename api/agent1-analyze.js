@@ -183,6 +183,7 @@ export default async function handler(req, res) {
   // Analisa em lotes de 5 para não exceder o contexto do Haiku
   const BATCH = 5;
   const allAnalyses = [];
+  const batchErrors = [];
   for (let i = 0; i < leads.length; i += BATCH) {
     const slice = leads.slice(i, i + BATCH);
     try {
@@ -190,12 +191,16 @@ export default async function handler(req, res) {
       allAnalyses.push(...analyses);
     } catch (err) {
       console.error(`[agent1-analyze] Erro no lote ${i}–${i + BATCH}:`, err.message);
-      // Continua para os próximos lotes mesmo se um falhar
+      batchErrors.push(err.message);
     }
   }
 
   if (!allAnalyses.length) {
-    return res.status(502).json({ ok: false, error: 'Anthropic não retornou análises válidas' });
+    return res.status(502).json({
+      ok: false,
+      error: 'Anthropic não retornou análises válidas',
+      details: batchErrors,
+    });
   }
 
   // Salva no banco
