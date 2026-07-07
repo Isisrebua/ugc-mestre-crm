@@ -15,7 +15,7 @@
 //   5. Critério Ouro — veredicto final: vale prospectar?
 //
 // Variáveis de ambiente necessárias (Vercel):
-//   ANTHROPIC_API_KEY      — chave da API da Anthropic
+//   GOOGLE_API_KEY         — chave da API do Google AI Studio (gratuita)
 //   DATABASE_URL_EXTERNAL  — PostgreSQL externo (Render)
 //   HUNTER_SECRET          — protege este endpoint
 //
@@ -80,7 +80,7 @@ Para cada lead analisado:
 
 Responda APENAS com um array JSON com todos os leads analisados. Sem texto antes ou depois.`;
 
-// ── Chama Anthropic para analisar um lote ────────────────────────────────────
+// ── Chama Gemini para analisar um lote ───────────────────────────────────────
 async function analyzeBatch(leads) {
   const userMsg = leads.map(l => {
     const raw = l.rawData || {};
@@ -104,31 +104,31 @@ async function analyzeBatch(leads) {
     return lines.join('\n');
   }).join('\n\n---\n\n');
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const prompt = `${ANALYSIS_SYSTEM}\n\nAnalise os seguintes ${leads.length} lead(s) e retorne o array JSON:\n\n${userMsg}`;
+
+  const apiKey = process.env.GOOGLE_API_KEY;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+  const resp = await fetch(url, {
     method:  'POST',
-    headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:      'claude-haiku-4-5-20251001',  // Haiku: mais rápido e barato para análise em lote
-      max_tokens: 2048,
-      system:     ANALYSIS_SYSTEM,
-      messages:   [{
-        role:    'user',
-        content: `Analise os seguintes ${leads.length} lead(s) e retorne o array JSON:\n\n${userMsg}`,
-      }],
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature:     0.3,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+      },
     }),
   });
 
   if (!resp.ok) {
     const txt = await resp.text();
-    throw new Error(`Anthropic API ${resp.status}: ${txt}`);
+    throw new Error(`Gemini API ${resp.status}: ${txt}`);
   }
 
   const data = await resp.json();
-  const raw  = data.content?.[0]?.text || '[]';
+  const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
   const clean = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
   return JSON.parse(clean);
 }
@@ -169,8 +169,8 @@ export default async function handler(req, res) {
     if (provided !== secret) return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY não configurada' });
+  if (!process.env.GOOGLE_API_KEY) {
+    return res.status(500).json({ error: 'GOOGLE_API_KEY não configurada no painel Vercel' });
   }
 
   const body  = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
