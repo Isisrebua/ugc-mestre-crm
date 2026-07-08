@@ -5398,31 +5398,14 @@ function renderVisaoGeral() {
     </div>`).join('');
 
   // ── Agentes + Pendências Isis ──
-  // Busca status em tempo real do banco; fallback para inativo se offline
-  let liveOps = {};
-  try {
-    const sr = await fetch('https://ugc-mestre-crm.vercel.app/api/agent-status');
-    if (sr.ok) { const sd = await sr.json(); (sd.agents||[]).forEach(a => { liveOps[a.agent] = a; }); }
-  } catch(_) {}
-
-  const _agStatus = (key, fallback) => {
-    const row = liveOps[key];
-    if (!row || row.status === 'inativo') return { label: fallback, dot: 'gray', dotC: '#aaa' };
-    const map = {
-      minerando:  { label: `⛏ Ativo — Minerando${row.detail ? ' · ' + row.detail.split('·')[0].trim() : ''}`, dot: 'orange', dotC: '#FF9B4A' },
-      analisando: { label: `🧠 Ativo — Analisando com Gemini`, dot: 'blue', dotC: 'var(--blue-d)' },
-      concluido:  { label: `✅ Concluído · ${row.detail || ''}`, dot: 'green', dotC: 'var(--mint-d)' },
-    };
-    return map[row.status] || { label: row.detail || row.status, dot: 'gray', dotC: '#aaa' };
-  };
-
+  // Status fixo ao renderizar (inativo por padrão); atualiza via fetch assíncrono abaixo
   const agentsData = [
-    { icon:'⚙️', name:'Agente 1 · Caçador',      role:'Mineração e qualificação',          bg:'#EDE8FF', ..._agStatus('ag1',      'Inativo — aguardando ativação') },
-    { icon:'📝', name:'Agente 2 · Roteirista',    role:'Estratégia e criação de cadências', bg:'#DFFCE9', ..._agStatus('ag2',      'Inativo — aguardando ativação') },
-    { icon:'🎨', name:'Agente 3 · Dir. Criativo', role:'Brief de conteúdo e direção visual',bg:'#FFE8D5', ..._agStatus('ag3',      'Inativo — aguardando ativação') },
-    { icon:'📊', name:'Agente 4 · Analista BI',   role:'Relatórios e análise preditiva',   bg:'#D8ECFF', ..._agStatus('ag4',      'Inativo — aguardando ativação') },
-    { icon:'⚡', name:'Agente 5 · Automação',     role:'Disparos e agendamentos',          bg:'#FFF4CC', ..._agStatus('ag5',      'Inativo — aguardando ativação') },
-    { icon:'🤖', name:'Agente Atendente',          role:'Monitoramento de DMs e respostas', bg:'#FFE0F0', ..._agStatus('ag_atend', 'Inativo — aguardando ativação') },
+    { icon:'⚙️', name:'Agente 1 · Caçador',      role:'Mineração e qualificação',          bg:'#EDE8FF', label:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa' },
+    { icon:'📝', name:'Agente 2 · Roteirista',    role:'Estratégia e criação de cadências', bg:'#DFFCE9', label:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa' },
+    { icon:'🎨', name:'Agente 3 · Dir. Criativo', role:'Brief de conteúdo e direção visual',bg:'#FFE8D5', label:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa' },
+    { icon:'📊', name:'Agente 4 · Analista BI',   role:'Relatórios e análise preditiva',   bg:'#D8ECFF', label:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa' },
+    { icon:'⚡', name:'Agente 5 · Automação',     role:'Disparos e agendamentos',          bg:'#FFF4CC', label:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa' },
+    { icon:'🤖', name:'Agente Atendente',          role:'Monitoramento de DMs e respostas', bg:'#FFE0F0', label:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa' },
   ];
 
   // Pendências por segmento
