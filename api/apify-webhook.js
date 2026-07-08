@@ -34,10 +34,10 @@ export const config = { maxDuration: 60 };
 // Mapeamos o actId para o normalizador correto.
 // Se você usar outro ator, adicione o ID aqui e crie o normalizador abaixo.
 const ACTOR_NORMALIZERS = {
-  // apify/instagram-profile-scraper
+  // apify/instagram-profile-scraper (legado — scrape por URL/username)
   'dSCLg0C3YEZ83HzYX': normalizeInstagram,
-  // apify/instagram-hashtag-scraper (disparado pelo Agente 1)
-  'reGe1ST3OBgYZSsZJ': normalizeInstagramHashtag,
+  // jurassic_jove/instagram-email-scraper (Agente 1 — busca por keyword/nicho)
+  '3fgjV51WijDcQxpIK': normalizeInstagramEmailScraper,
   // compass/crawler-google-places (Google Maps Scraper)
   'nwua9Gu5YrADL7ZDj': normalizeGoogleMaps,
   // lukaskrivka/google-maps-with-contact-details (Maps + Email)
@@ -96,10 +96,58 @@ function normalizeInstagram(item) {
   };
 }
 
-// apify/instagram-hashtag-scraper
-// Campos: ownerUsername, ownerFullName, caption, likesCount, commentsCount,
-//         videoViewCount, url, timestamp, hashtags, locationName
-// Retorna POSTS — extraímos as contas únicas como leads
+// jurassic_jove/instagram-email-scraper
+// Busca perfis por keyword/nicho. Retorna dados de perfil completos + email do site.
+// Campos: username, fullName, bio, followersCount, postsCount, website,
+//         isVerified, isBusinessAccount, accountCategory, email, phone,
+//         socials { facebook, linkedin, twitter, youtube, tiktok }
+function normalizeInstagramEmailScraper(item) {
+  if (!item.username && !item.fullName) return null;
+
+  const nome  = item.fullName || item.username;
+  const insta = item.username ? `@${item.username}` : null;
+  const seg   = item.accountCategory || item.businessCategoryName || 'Instagram';
+
+  const followers = item.followersCount || 0;
+  const pot = followers >= 50000 ? 'alto' : followers >= 5000 ? 'medio' : 'baixo';
+
+  const seguidores = followers
+    ? followers >= 1000 ? `${Math.round(followers / 1000)}k` : String(followers)
+    : null;
+
+  // Coleta emails — do campo direto ou do site visitado
+  const email = item.email || item.emails?.[0] || null;
+
+  // LinkedIn e outros sociais encontrados pelo ator
+  const linkedin = item.socials?.linkedin || null;
+
+  const tags = ['instagram', ...(item.isVerified ? ['verificado'] : []), ...(item.isBusinessAccount ? ['conta comercial'] : [])];
+
+  return {
+    nome,
+    insta,
+    site:      item.website || null,
+    seg,
+    email,
+    telefone:  item.phone || null,
+    linkedin,
+    pot,
+    seguidores,
+    just:      item.bio ? `Bio: ${item.bio.slice(0, 200)}` : `Perfil encontrado via busca por nicho`,
+    tags,
+    rawData: {
+      instagramUrl:      `https://instagram.com/${item.username}`,
+      isBusinessAccount: item.isBusinessAccount,
+      isVerified:        item.isVerified,
+      postsCount:        item.postsCount,
+      followersCount:    followers,
+      socials:           item.socials,
+    },
+  };
+}
+
+// apify/instagram-hashtag-scraper (LEGADO — não usar no Agente 1)
+// Campos: ownerUsername, ownerFullName, caption, likesCount, commentsCount
 function normalizeInstagramHashtag(item) {
   const username = item.ownerUsername || item.ownerId;
   if (!username) return null;
@@ -296,6 +344,7 @@ export default async function handler(req, res) {
   const normalize = (actId && ACTOR_NORMALIZERS[actId]) || normalizeGeneric;
   const SOURCE_LABELS = {
     'dSCLg0C3YEZ83HzYX': 'instagram',
+    '3fgjV51WijDcQxpIK': 'instagram',
     'reGe1ST3OBgYZSsZJ': 'instagram_hashtag',
     'nwua9Gu5YrADL7ZDj': 'google_maps',
     'WnMxbsRLNbPeYL6ge': 'google_maps',

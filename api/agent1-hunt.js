@@ -47,12 +47,16 @@ export const config = { maxDuration: 30 };
 // ── Mapeamento: source → Ator Apify ─────────────────────────────────────────
 const ACTORS = {
   instagram: {
-    id:   'reGe1ST3OBgYZSsZJ',          // apify/instagram-hashtag-scraper
-    name: 'apify/instagram-hashtag-scraper',
-    buildInput: ({ hashtag, nicho, limite }) => ({
-      hashtags:      [hashtag || nicho],
-      resultsType:   'posts',
-      resultsLimit:  limite || 30,
+    id:   '3fgjV51WijDcQxpIK',          // jurassic_jove/instagram-email-scraper
+    name: 'jurassic_jove/instagram-email-scraper',
+    buildInput: ({ nicho, hashtag, limite }) => ({
+      searchTerms:      [nicho || hashtag],
+      searchType:       'user',           // busca perfis, não hashtags nem posts
+      resultsPerSearch: Math.min(limite || 30, 50),
+      maxResults:       limite || 30,
+      scrapeEmails:     true,
+      scrapeSocials:    true,
+      maxConcurrency:   3,
     }),
   },
   google_maps: {
