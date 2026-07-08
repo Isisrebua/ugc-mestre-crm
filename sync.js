@@ -424,9 +424,11 @@
   function _ensureDefaultConfig() {
     const cfg = getConfig();
     if (!cfg.n8nUrl) {
+      // Primeira vez: configura URL padrão com sync ativo
       setConfig({ n8nUrl: DEFAULT_VERCEL_URL, enabled: true });
-    } else if (!cfg.enabled) {
-      // URL já salva mas desabilitada — não forçar reativação
+    } else if (cfg.n8nUrl === DEFAULT_VERCEL_URL && !cfg.enabled) {
+      // URL é a Vercel de produção mas sync estava desligado: reativa
+      setConfig({ n8nUrl: DEFAULT_VERCEL_URL, enabled: true });
     }
   }
 

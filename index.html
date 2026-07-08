@@ -6962,11 +6962,43 @@ function initAg2StatusWatcher() {
 async function syncFromCloud() {
   const btn = document.getElementById('cloud-sync-btn');
   const orig = btn.textContent;
-  btn.textContent = '⏳ Buscando...';
   btn.disabled = true;
 
+  const BASE = 'https://ugc-mestre-crm.vercel.app';
+
+  // 1. PUSH — sobe o estado local primeiro (garante que leads do celular vão para a nuvem)
   try {
-    const r = await fetch('https://ugc-mestre-crm.vercel.app/api/crm-pull');
+    btn.textContent = '⬆️ Enviando...';
+    const pushPayload = {
+      leads:      Leads_Geral      || [],
+      cadencia:   Cadencia         || {},
+      interacoes: Interacoes       || {},
+      clientes:   Clientes_Ativos  || [],
+      calls:      CallsAgendadas   || [],
+      globalState: {
+        nichoCustom:    window._nichoCustom     || {},
+        plChecked:      plChecked               || {},
+        plLeadComments: plLeadComments          || {},
+        plGlobalCmdText:plGlobalCmdText         || '',
+        aprovMasterText:window.aprovMasterText  || '',
+        aprovEtapaCmd:  window.aprovEtapaCmd    || {},
+        aprovReprocess: window.aprovReprocess   || {},
+      },
+    };
+    const rPush = await fetch(`${BASE}/api/crm-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pushPayload),
+    });
+    if (!rPush.ok) console.warn('[sync] push retornou', rPush.status);
+  } catch (e) {
+    console.warn('[sync] push falhou (continuando com pull):', e.message);
+  }
+
+  // 2. PULL — busca estado completo da nuvem (inclui dados de outros dispositivos)
+  try {
+    btn.textContent = '⬇️ Buscando...';
+    const r = await fetch(`${BASE}/api/crm-pull`);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
 
