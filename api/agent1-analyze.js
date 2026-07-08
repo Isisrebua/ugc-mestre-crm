@@ -128,9 +128,23 @@ async function analyzeBatch(leads) {
   }
 
   const data = await resp.json();
-  const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-  const clean = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-  return JSON.parse(clean);
+  let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+
+  // Remove markdown code fences se presentes
+  raw = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+
+  // Garante que o JSON começa no array e termina nele
+  const start = raw.indexOf('[');
+  const end   = raw.lastIndexOf(']');
+  if (start !== -1 && end !== -1) raw = raw.slice(start, end + 1);
+
+  // Sanitiza strings dentro do JSON: substitui newlines literais e tabs
+  // dentro de valores de string por espaço (só afeta conteúdo, não estrutura)
+  raw = raw.replace(/("(?:[^"\\]|\\.)*")/g, m =>
+    m.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ')
+  );
+
+  return JSON.parse(raw);
 }
 
 // ── Atualiza lead no PostgreSQL ───────────────────────────────────────────────
