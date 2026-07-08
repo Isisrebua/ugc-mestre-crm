@@ -104,7 +104,7 @@ async function analyzeBatch(leads) {
     return lines.join('\n');
   }).join('\n\n---\n\n');
 
-  const prompt = `${ANALYSIS_SYSTEM}\n\nAnalise os seguintes ${leads.length} lead(s) e retorne o array JSON:\n\n${userMsg}`;
+  const prompt = `${ANALYSIS_SYSTEM}\n\nAnalise o seguinte lead e retorne um array JSON com exatamente 1 objeto. Todos os valores de string devem estar em uma única linha, sem quebras de linha:\n\n${userMsg}`;
 
   const apiKey = process.env.GOOGLE_API_KEY;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
@@ -194,8 +194,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Campo "leads" obrigatório e não pode ser vazio' });
   }
 
-  // Analisa em lotes de 5 para não exceder o contexto do Haiku
-  const BATCH = 5;
+  // Analisa 1 lead por vez — mais confiável com JSON do Gemini
+  const BATCH = 1;
   const allAnalyses = [];
   const batchErrors = [];
   for (let i = 0; i < leads.length; i += BATCH) {
