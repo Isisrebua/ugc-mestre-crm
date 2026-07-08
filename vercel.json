@@ -9,7 +9,8 @@
     "api/apify-webhook.js":  { "maxDuration": 60 },
     "api/agent1-hunt.js":    { "maxDuration": 30 },
     "api/agent1-think.js":   { "maxDuration": 60 },
-    "api/agent1-analyze.js": { "maxDuration": 60 }
+    "api/agent1-analyze.js": { "maxDuration": 60 },
+    "api/agent1-refine.js":  { "maxDuration": 30 }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },

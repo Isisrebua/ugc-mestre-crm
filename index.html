@@ -2824,6 +2824,78 @@ function _agente1Toast(html, tipo) {
   setTimeout(() => { if (el.parentNode) el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, 6000);
 }
 
+/* ── Ajuste Fino · Agente 1 ── */
+async function sendRefine(leadId, page) {
+  const ta  = document.getElementById(`refine-ta-${leadId}`);
+  const btn = document.getElementById(`refine-btn-${leadId}`);
+  const status = document.getElementById(`refine-status-${leadId}`);
+  const instrucao = (ta ? ta.value : '').trim();
+
+  if (!instrucao) {
+    if (ta) ta.focus();
+    return;
+  }
+
+  if (btn) { btn.textContent = '⏳ Agente pensando…'; btn.disabled = true; }
+  if (status) status.textContent = '• processando';
+
+  const cfg  = getConfig ? getConfig() : {};
+  const base = (cfg.n8nUrl || 'https://ugc-mestre-crm.vercel.app').replace(/\/$/, '');
+
+  let resp;
+  try {
+    const r = await fetch(`${base}/api/agent1-refine`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Hunter-Secret': cfg.hunterSecret || 'Lucyrebua2@' },
+      body:    JSON.stringify({ leadId, instrucao }),
+    });
+    resp = await r.json();
+  } catch (err) {
+    if (btn)   { btn.textContent = '✨ Refinar com IA'; btn.disabled = false; }
+    if (status) status.textContent = '• erro de rede';
+    _agente1Toast(`❌ Erro ao contatar o Agente: ${err.message}`, 'erro');
+    return;
+  }
+
+  if (!resp.ok) {
+    if (btn)   { btn.textContent = '✨ Refinar com IA'; btn.disabled = false; }
+    if (status) status.textContent = '• falhou';
+    _agente1Toast(`⚠️ Agente: ${resp.error || 'Resposta inválida'}`, 'aviso');
+    return;
+  }
+
+  // Aplica os campos retornados no lead local e nos textareas do painel
+  const lead = Leads_Geral.find(l => l.id === leadId);
+  const campos = resp.campos || {};
+  if (lead) {
+    if (campos.just)    lead.just    = campos.just;
+    if (campos.garg)    lead.garg    = campos.garg;
+    if (campos.insight) lead.insight = campos.insight;
+    if (campos.pot)     lead.pot     = campos.pot;
+    if (campos.tags)    lead.tags    = campos.tags;
+    _scheduleSave();
+  }
+
+  // Atualiza textareas visíveis sem fechar o painel
+  const updFields = { just: campos.just, garg: campos.garg, insight: campos.insight };
+  Object.entries(updFields).forEach(([f, v]) => {
+    if (!v) return;
+    const el = document.getElementById(`field-${f}-${leadId}`);
+    if (el) el.value = v;
+  });
+
+  if (ta)     ta.value = '';
+  if (btn)   { btn.textContent = '✨ Refinar com IA'; btn.disabled = false; }
+  if (status) status.textContent = '• atualizado ✓';
+  setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+
+  _agente1Toast(
+    `✅ <b>${resp.nome}</b> refinado pelo Agente 1.<br>` +
+    `<small style="opacity:.8">Potencial: ${campos.pot || '—'} · Campos atualizados no banco.</small>`,
+    'sucesso'
+  );
+}
+
 /* ── Lead row exclusivo da Pré-Lista ── */
 function plLeadRowHTML(l) {
   const initials  = l.nome.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
@@ -6204,12 +6276,29 @@ function openDetail(leadId, page) {
 
         <div class="info-block">
           <div class="ib-title">Análise <span style="font-size:8px;font-weight:600;font-style:italic;color:var(--txt-s)">(editável)</span></div>
-          <textarea class="edit-analysis-ta" style="margin-bottom:6px" onblur="saveAnalysisField(${leadId},'just',this.value)">${lead.just||''}</textarea>
+          <textarea class="edit-analysis-ta" id="field-just-${leadId}" style="margin-bottom:6px" onblur="saveAnalysisField(${leadId},'just',this.value)">${lead.just||''}</textarea>
           <div class="ib-title">Gargalo</div>
-          <textarea class="edit-analysis-ta" style="margin-bottom:6px" onblur="saveAnalysisField(${leadId},'garg',this.value)">${lead.garg||''}</textarea>
+          <textarea class="edit-analysis-ta" id="field-garg-${leadId}" style="margin-bottom:6px" onblur="saveAnalysisField(${leadId},'garg',this.value)">${lead.garg||''}</textarea>
           <div class="ib-title">Insight de Conexão</div>
-          <textarea class="edit-analysis-ta" style="border-left:3px solid var(--blue-d)" onblur="saveAnalysisField(${leadId},'insight',this.value)">${lead.insight||''}</textarea>
+          <textarea class="edit-analysis-ta" id="field-insight-${leadId}" style="border-left:3px solid var(--blue-d)" onblur="saveAnalysisField(${leadId},'insight',this.value)">${lead.insight||''}</textarea>
         </div>
+
+        ${page === 'qualificados' ? `
+        <div class="info-block" id="refine-block-${leadId}" style="border-left:3px solid #9B7FD4;background:linear-gradient(135deg,#F5F0FF,#EDE8FF)">
+          <div class="ib-title" style="color:#6B46C1;display:flex;align-items:center;gap:6px">
+            🤖 Ajuste Fino · Agente 1
+            <span id="refine-status-${leadId}" style="font-size:9px;font-weight:600;color:var(--txt-s)"></span>
+          </div>
+          <textarea id="refine-ta-${leadId}" class="edit-analysis-ta"
+            style="border-left:none;background:#fff;min-height:60px;margin-bottom:8px"
+            placeholder="Ex: Foca no pitch de reels curtos. Ajusta o gargalo para marcas que ainda não têm UGC próprio..."></textarea>
+          <button onclick="sendRefine(${leadId},'${page}')"
+            id="refine-btn-${leadId}"
+            style="width:100%;padding:8px;background:linear-gradient(135deg,#9B7FD4,#7C5FC8);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">
+            ✨ Refinar com IA
+          </button>
+        </div>` : ''}
+
 
         <div class="info-block">
           <div class="ib-title">Canais de Contato</div>
