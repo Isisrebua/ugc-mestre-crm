@@ -1,5 +1,5 @@
-/* UGC Mestre CRM — Service Worker v2.6 */
-const CACHE_NAME = 'ugc-mestre-v2.6';
+/* UGC Mestre CRM — Service Worker v2.8 */
+const CACHE_NAME = 'ugc-mestre-v2.8';
 const ASSETS = [
   './index.html',
   './manifest.json',
