@@ -1512,10 +1512,18 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
         <div class="pl-main-col" id="prelista-main">
 
           <!-- Cabeçalho -->
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
             <span style="font-size:14px;font-weight:800">🤖 Pré-Lista · Agente 1</span>
             <span class="tag tag-lav" id="prelista-total-badge">0 marcas</span>
             <span class="tag tag-gray" id="pl-checked-badge" style="display:none">0 selecionados</span>
+          </div>
+
+          <!-- Barra de exclusão em massa — aparece quando há checkboxes marcados -->
+          <div id="pl-bulk-bar" style="display:none;align-items:center;gap:8px;padding:8px 12px;background:#FFF0EE;border:1.5px solid #F5C6C0;border-radius:10px;margin-bottom:10px">
+            <span style="font-size:12px;font-weight:700;color:#C0392B;flex:1" id="pl-bulk-bar-label">0 selecionados</span>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:5px 12px" onclick="plClearAll()">✕ Limpar</button>
+            <button style="background:#C0392B;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:800;cursor:pointer"
+              id="pl-bulk-delete-top" onclick="plBulkDelete(this)">🗑️ Excluir Selecionados</button>
           </div>
 
           <!-- Instruções Gerais — textarea permanente, sempre no DOM -->
@@ -2621,13 +2629,21 @@ function plCalClear() {
 
 /* ── Pré-Lista checkbox / triagem ── */
 function plToggleCheck(leadId) {
-  if (plChecked[leadId]) {
+  if (plChecked[leadId] !== undefined) {
     delete plChecked[leadId];
   } else {
-    plChecked[leadId] = 'aprovado'; /* default destination */
+    plChecked[leadId] = 'aprovado';
   }
   _scheduleSave();
-  renderPreLista();
+
+  // Atualiza apenas a row clicada (sem re-renderizar a lista toda)
+  const lead = Leads_Geral.find(l => l.id === leadId);
+  if (lead) {
+    const rowEl = document.getElementById('pl-row-' + leadId);
+    if (rowEl) rowEl.outerHTML = plLeadRowHTML(lead);
+  }
+  renderDispatchPanel();
+  _updateBulkDeleteBar();
 }
 
 function plSetDest(leadId, dest) {
@@ -2692,6 +2708,7 @@ function updatePlBadge() {
 
 function plClearAll() {
   plChecked = {};
+  _updateBulkDeleteBar();
   renderPreLista();
 }
 
@@ -7088,37 +7105,60 @@ async function syncFromCloud() {
   }
 }
 
+// Atualiza a barra de exclusão em massa no topo da Pré-Lista
+function _updateBulkDeleteBar() {
+  const n   = Object.keys(plChecked).length;
+  const bar = document.getElementById('pl-bulk-bar');
+  const lbl = document.getElementById('pl-bulk-bar-label');
+  if (!bar) return;
+  if (n > 0) {
+    bar.style.display = 'flex';
+    if (lbl) lbl.textContent = n + ' selecionado' + (n !== 1 ? 's' : '');
+  } else {
+    bar.style.display = 'none';
+  }
+  updatePlBadge();
+}
+
 // Exclui em massa todos os leads selecionados (checkboxes)
 async function plBulkDelete(btn) {
   const ids = Object.keys(plChecked).map(Number);
   if (!ids.length) return;
-  const nomes = ids.map(id => { const l = Leads_Geral.find(x => x.id === id); return l ? l.nome : id; });
-  if (!confirm(`Excluir ${ids.length} lead(s) permanentemente?\n\n${nomes.slice(0,5).join('\n')}${nomes.length>5?`\n…e mais ${nomes.length-5}`:'`'}`)) return;
-  btn.textContent = `⏳ Excluindo ${ids.length}…`;
+  const nomes = ids.map(id => { const l = Leads_Geral.find(x => x.id === id); return l ? l.nome : String(id); });
+  const extra = nomes.length > 5 ? '\n…e mais ' + (nomes.length - 5) : '';
+  if (!confirm('Excluir ' + ids.length + ' lead(s) permanentemente?\n\n' + nomes.slice(0, 5).join('\n') + extra)) return;
+
+  const orig = btn.textContent;
+  btn.textContent = 'Excluindo ' + ids.length + '…';
   btn.disabled = true;
+
   const BASE = 'https://ugc-mestre-crm.vercel.app';
   let deleted = 0;
   for (const leadId of ids) {
     try {
-      const r = await fetch(`${BASE}/api/lead-delete`, {
-        method: 'POST',
+      const r = await fetch(BASE + '/api/lead-delete', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json', 'X-Hunter-Secret': 'Lucyrebua2@' },
-        body: JSON.stringify({ leadId }),
+        body:    JSON.stringify({ leadId }),
       });
       if (r.ok) {
         Leads_Geral = Leads_Geral.filter(l => l.id !== leadId);
         delete plChecked[leadId];
         delete plLeadComments[leadId];
-        const row = document.getElementById(`pl-row-${leadId}`);
+        const row = document.getElementById('pl-row-' + leadId);
         if (row) { row.style.transition = 'opacity .2s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 220); }
         deleted++;
       }
     } catch(_) {}
   }
+
   _saveAll();
   updateBadges();
+  _updateBulkDeleteBar();
   renderDispatchPanel();
-  if (deleted < ids.length) alert(`${deleted} excluído(s). ${ids.length - deleted} falharam.`);
+  btn.textContent = orig;
+  btn.disabled = false;
+  if (deleted < ids.length) alert(deleted + ' excluído(s). ' + (ids.length - deleted) + ' falharam.');
 }
 
 // Exclui lead do banco e remove da tela imediatamente
