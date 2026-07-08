@@ -160,9 +160,10 @@ export default async function handler(req, res) {
   }
 
   // ── URL do webhook de retorno ───────────────────────────────────────────────
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'https://ugc-mestre-crm.vercel.app';
+  // IMPORTANTE: VERCEL_URL aponta para o deploy atual (preview), não para o
+  // domínio de produção. O webhook do Apify DEVE apontar para o domínio fixo
+  // de produção para garantir que o callback sempre chegue ao lugar certo.
+  const baseUrl = process.env.PRODUCTION_URL || 'https://ugc-mestre-crm.vercel.app';
 
   const webhookUrl = `${baseUrl}/api/apify-webhook`
     + (secret ? `?secret=${encodeURIComponent(secret)}` : '');
