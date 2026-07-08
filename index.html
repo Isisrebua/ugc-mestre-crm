@@ -7058,6 +7058,19 @@ async function syncFromCloud() {
     updateBadges();
     renderPage(currentPage);
 
+    // Detecta leads com análise pendente e dispara Gemini em background
+    const pendentes = leads.filter(l => (l.statusFlags || []).includes('pendente_analise'));
+    if (pendentes.length > 0) {
+      btn.textContent = `🧠 Analisando ${pendentes.length} lead(s)...`;
+      _dispararAnaliseAutomatica(pendentes.map(l => l.id), BASE).then(ok => {
+        if (ok) {
+          // Re-sincroniza para pegar campos atualizados pelo Gemini
+          setTimeout(() => syncFromCloud(), 1500);
+        }
+      });
+      return; // btn será reativado pelo syncFromCloud recursivo
+    }
+
     btn.textContent = leads.length ? `✅ ${leads.length} lead(s) carregados` : '☁️ Banco vazio';
     setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
 
@@ -7065,6 +7078,25 @@ async function syncFromCloud() {
     btn.textContent = '❌ ' + err.message;
     btn.disabled = false;
     setTimeout(() => { btn.textContent = orig; }, 4000);
+  }
+}
+
+// Dispara análise Gemini automática para leads pendentes
+// Chama /api/agent1-analyze sem body — endpoint busca pendentes do banco sozinho
+async function _dispararAnaliseAutomatica(ids, base) {
+  try {
+    const secret = 'Lucyrebua2@';
+    const r = await fetch(`${base}/api/agent1-analyze`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Hunter-Secret': secret },
+      body:    JSON.stringify({}),  // body vazio = modo automático (busca pendentes no banco)
+    });
+    const data = await r.json();
+    console.log('[análise automática]', data);
+    return r.ok;
+  } catch (err) {
+    console.error('[análise automática] falhou:', err.message);
+    return false;
   }
 }
 

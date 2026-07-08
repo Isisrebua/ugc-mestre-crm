@@ -156,14 +156,19 @@ async function updateLead(client, analysis) {
 
   const statusFlags = metaAds ? escArr(['meta_ads']) : `(SELECT status_flags FROM leads WHERE id = ${esc(id)})`;
 
+  // Remove pendente_analise e adiciona meta_ads se aplicável
+  const flagsExpr = metaAds
+    ? `array_remove(array_append(COALESCE(status_flags,'{}'), 'meta_ads'), 'pendente_analise')`
+    : `array_remove(COALESCE(status_flags,'{}'), 'pendente_analise')`;
+
   await client.query(`
     UPDATE leads SET
-      pot          = ${esc(pot || 'medio')},
-      just         = ${esc(just || null)},
-      garg         = ${esc(garg || null)},
-      insight      = ${esc(insight || null)},
-      tags         = ${escArr(allTags)},
-      status_flags = ${statusFlags},
+      pot           = ${esc(pot || 'medio')},
+      just          = ${esc(just || null)},
+      garg          = ${esc(garg || null)},
+      insight       = ${esc(insight || null)},
+      tags          = ${escArr(allTags)},
+      status_flags  = ${flagsExpr},
       ag2_reasoning = ${escJ({ analisadoEm: new Date().toISOString(), protocolo: '5-eixos', metaAds: !!metaAds })}
     WHERE id = ${esc(id)}
   `);
@@ -187,47 +192,65 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GOOGLE_API_KEY não configurada no painel Vercel' });
   }
 
-  const body  = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-  const leads = Array.isArray(body.leads) ? body.leads : [];
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 
-  if (!leads.length) {
-    return res.status(400).json({ error: 'Campo "leads" obrigatório e não pode ser vazio' });
-  }
-
-  // Analisa 1 lead por vez — mais confiável com JSON do Gemini
-  const BATCH = 1;
-  const allAnalyses = [];
-  const batchErrors = [];
-  for (let i = 0; i < leads.length; i += BATCH) {
-    const slice = leads.slice(i, i + BATCH);
-    try {
-      const analyses = await analyzeBatch(slice);
-      allAnalyses.push(...analyses);
-    } catch (err) {
-      console.error(`[agent1-analyze] Erro no lote ${i}–${i + BATCH}:`, err.message);
-      batchErrors.push(err.message);
-    }
-  }
-
-  if (!allAnalyses.length) {
-    return res.status(502).json({
-      ok: false,
-      error: 'Anthropic não retornou análises válidas',
-      details: batchErrors,
-    });
-  }
-
-  // Salva no banco
   const client = new Client({
     connectionString: process.env.DATABASE_URL_EXTERNAL,
     ssl: { rejectUnauthorized: false },
   });
 
-  let updated = 0;
-  const errors = [];
+  let leads = Array.isArray(body.leads) ? body.leads : [];
 
   try {
     await client.connect();
+
+    // Modo automático: sem leads no body, busca pendentes do banco
+    if (!leads.length) {
+      const r = await client.query(`
+        SELECT id, nome, seg, insta, site, seguidores, engajamento, just, tags, raw_data
+        FROM leads
+        WHERE 'pendente_analise' = ANY(status_flags)
+        ORDER BY created_at DESC
+        LIMIT 20
+      `);
+      leads = r.rows.map(row => ({
+        id:          row.id,
+        nome:        row.nome,
+        seg:         row.seg,
+        insta:       row.insta,
+        site:        row.site,
+        seguidores:  row.seguidores,
+        engajamento: row.engajamento,
+        just:        row.just,
+        tags:        row.tags || [],
+        rawData:     (typeof row.raw_data === 'string' ? JSON.parse(row.raw_data) : row.raw_data) || {},
+      }));
+    }
+
+    if (!leads.length) {
+      return res.status(200).json({ ok: true, message: 'Nenhum lead pendente de análise', analyzed: 0, updated: 0 });
+    }
+
+    // Analisa 1 lead por vez
+    const allAnalyses = [];
+    const batchErrors = [];
+    for (const lead of leads) {
+      try {
+        const analyses = await analyzeBatch([lead]);
+        // Preserva o ID do lead em cada análise retornada
+        if (analyses[0]) allAnalyses.push({ ...analyses[0], id: lead.id });
+      } catch (err) {
+        console.error(`[agent1-analyze] Erro em "${lead.nome}":`, err.message);
+        batchErrors.push(err.message);
+      }
+    }
+
+    if (!allAnalyses.length) {
+      return res.status(502).json({ ok: false, error: 'Gemini não retornou análises válidas', details: batchErrors });
+    }
+
+    let updated = 0;
+    const errors = [];
     for (const analysis of allAnalyses) {
       try {
         await updateLead(client, analysis);
@@ -236,15 +259,19 @@ export default async function handler(req, res) {
         errors.push({ id: analysis.id, error: err.message });
       }
     }
+
+    return res.status(200).json({
+      ok: true,
+      analyzed: allAnalyses.length,
+      updated,
+      errors: errors.length ? errors : undefined,
+      ts: new Date().toISOString(),
+    });
+
+  } catch (err) {
+    console.error('[agent1-analyze]', err.message);
+    return res.status(500).json({ ok: false, error: err.message });
   } finally {
     await client.end().catch(() => {});
   }
-
-  return res.status(200).json({
-    ok:        true,
-    analyzed:  allAnalyses.length,
-    updated,
-    errors:    errors.length ? errors : undefined,
-    ts:        new Date().toISOString(),
-  });
 }
