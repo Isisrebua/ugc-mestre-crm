@@ -2949,6 +2949,10 @@ function plLeadRowHTML(l) {
       <div style="display:flex;align-items:flex-start;gap:6px;flex-shrink:0;padding-top:2px" onclick="event.stopPropagation()">
         <span class="agent-tag ${agentInfo.cls}" style="font-size:9px">${agentInfo.icon} ${agentInfo.label}</span>
         ${extLinks}
+        <button title="Excluir lead" onclick="event.stopPropagation();deleteLead(${l.id},'${l.nome.replace(/'/g,"\\'")}',this)"
+          style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:14px;opacity:.45;line-height:1;border-radius:4px;transition:opacity .15s,background .15s"
+          onmouseenter="this.style.opacity='1';this.style.background='#FFE5E5'"
+          onmouseleave="this.style.opacity='.45';this.style.background='none'">🗑️</button>
         <span style="font-size:14px;color:var(--txt-s);opacity:.35;line-height:1">›</span>
       </div>
     </div>`;
@@ -7078,6 +7082,33 @@ async function syncFromCloud() {
     btn.textContent = '❌ ' + err.message;
     btn.disabled = false;
     setTimeout(() => { btn.textContent = orig; }, 4000);
+  }
+}
+
+// Exclui lead do banco e remove da tela imediatamente
+async function deleteLead(leadId, nome, btn) {
+  if (!confirm(`Excluir "${nome}" permanentemente?`)) return;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    const r = await fetch('https://ugc-mestre-crm.vercel.app/api/lead-delete', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Hunter-Secret': 'Lucyrebua2@' },
+      body:    JSON.stringify({ leadId }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Erro ao excluir');
+    // Remove do array local e da tela sem precisar re-sincronizar
+    Leads_Geral = Leads_Geral.filter(l => l.id !== leadId);
+    delete plChecked[leadId];
+    delete plLeadComments[leadId];
+    _saveAll();
+    updateBadges();
+    const row = document.getElementById(`pl-row-${leadId}`);
+    if (row) { row.style.transition='opacity .25s'; row.style.opacity='0'; setTimeout(()=>row.remove(),260); }
+  } catch (err) {
+    btn.textContent = '🗑️'; btn.disabled = false;
+    alert('Falha ao excluir: ' + err.message);
   }
 }
 
