@@ -11,7 +11,8 @@
     "api/agent1-think.js":   { "maxDuration": 60 },
     "api/agent1-analyze.js": { "maxDuration": 60 },
     "api/agent1-refine.js":  { "maxDuration": 30 },
-    "api/lead-delete.js":   { "maxDuration": 15 }
+    "api/lead-delete.js":   { "maxDuration": 15 },
+    "api/agent-status.js":  { "maxDuration": 15 }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },

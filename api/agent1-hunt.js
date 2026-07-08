@@ -49,15 +49,24 @@ const ACTORS = {
   instagram: {
     id:   '3fgjV51WijDcQxpIK',          // jurassic_jove/instagram-email-scraper
     name: 'jurassic_jove/instagram-email-scraper',
-    buildInput: ({ nicho, hashtag, limite }) => ({
-      searchTerms:      [nicho || hashtag],
-      searchType:       'user',           // busca perfis, não hashtags nem posts
-      resultsPerSearch: Math.min(limite || 30, 50),
-      maxResults:       limite || 30,
-      scrapeEmails:     true,
-      scrapeSocials:    true,
-      maxConcurrency:   3,
-    }),
+    buildInput: ({ nicho, hashtag, limite }) => {
+      // Garante foco no Brasil: adiciona "brasil" ao termo se não houver indicador geográfico
+      const termo = nicho || hashtag;
+      const termoBR = /brasil|br\b|são paulo|rio de janeiro|belo horizonte/i.test(termo)
+        ? termo
+        : `${termo} brasil`;
+      const cap = Math.min(limite || 10, 30); // máx 30 para evitar timeout no webhook
+      return {
+        searchTerms:      [termoBR],
+        searchType:       'user',     // perfis, nunca hashtags ou posts
+        resultsPerSearch: cap,
+        maxResults:       cap,
+        scrapeEmails:     true,
+        scrapeSocials:    true,
+        maxConcurrency:   2,          // conservador para evitar bloqueio
+        country:          'BR',       // filtro de país do ator
+      };
+    },
   },
   google_maps: {
     id:   'nwua9Gu5YrADL7ZDj',           // compass/crawler-google-places
@@ -181,6 +190,21 @@ export default async function handler(req, res) {
       timeout:    600,
     });
 
+    const apifyRunUrl = `https://console.apify.com/actors/${actor.id}/runs/${run.id}`;
+
+    // ── Atualiza status do Agente 1 → Ativo — Minerando ─────────────────────
+    fetch(`${baseUrl}/api/agent-status`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Hunter-Secret': secret || '' },
+      body: JSON.stringify({
+        agent:    'ag1',
+        status:   'minerando',
+        detail:   `Minerando "${nicho}" (${source}) · ${actorInput.maxResults} leads`,
+        runId:    run.id,
+        apifyUrl: apifyRunUrl,
+      }),
+    }).catch(() => {});
+
     return res.status(200).json({
       ok:        true,
       runId:     run.id,
@@ -191,7 +215,7 @@ export default async function handler(req, res) {
       input:     actorInput,
       webhookUrl,
       message:   `Ator disparado com sucesso. Os leads chegarão automaticamente em /api/apify-webhook assim que a mineração terminar.`,
-      apifyRunUrl: `https://console.apify.com/actors/${actor.id}/runs/${run.id}`,
+      apifyRunUrl,
     });
 
   } catch (err) {

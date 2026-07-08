@@ -2676,6 +2676,8 @@ function renderDispatchPanel() {
       </div>` : ''}
       <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="plClearAll()">✕ Limpar Seleção</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;color:#C0392B;border-color:#F5C6C0" id="pl-bulk-delete-btn"
+          onclick="plBulkDelete(this)">🗑️ Excluir Selecionados (${checked.length})</button>
         <button class="btn btn-primary btn-sm" style="font-size:11px;font-weight:800" onclick="sendPreListaBatch()">📤 Enviar Instruções · Agente 1</button>
       </div>
     </div>`;
@@ -5396,13 +5398,31 @@ function renderVisaoGeral() {
     </div>`).join('');
 
   // ── Agentes + Pendências Isis ──
+  // Busca status em tempo real do banco; fallback para inativo se offline
+  let liveOps = {};
+  try {
+    const sr = await fetch('https://ugc-mestre-crm.vercel.app/api/agent-status');
+    if (sr.ok) { const sd = await sr.json(); (sd.agents||[]).forEach(a => { liveOps[a.agent] = a; }); }
+  } catch(_) {}
+
+  const _agStatus = (key, fallback) => {
+    const row = liveOps[key];
+    if (!row || row.status === 'inativo') return { label: fallback, dot: 'gray', dotC: '#aaa' };
+    const map = {
+      minerando:  { label: `⛏ Ativo — Minerando${row.detail ? ' · ' + row.detail.split('·')[0].trim() : ''}`, dot: 'orange', dotC: '#FF9B4A' },
+      analisando: { label: `🧠 Ativo — Analisando com Gemini`, dot: 'blue', dotC: 'var(--blue-d)' },
+      concluido:  { label: `✅ Concluído · ${row.detail || ''}`, dot: 'green', dotC: 'var(--mint-d)' },
+    };
+    return map[row.status] || { label: row.detail || row.status, dot: 'gray', dotC: '#aaa' };
+  };
+
   const agentsData = [
-    { icon:'⚙️', name:'Agente 1 · Caçador',     role:'Mineração e qualificação',         status:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa', bg:'#EDE8FF' },
-    { icon:'📝', name:'Agente 2 · Roteirista',   role:'Estratégia e criação de cadências', status:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa', bg:'#DFFCE9' },
-    { icon:'🎨', name:'Agente 3 · Dir. Criativo', role:'Brief de conteúdo e direção visual',status:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa', bg:'#FFE8D5' },
-    { icon:'📊', name:'Agente 4 · Analista BI',  role:'Relatórios e análise preditiva',   status:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa', bg:'#D8ECFF' },
-    { icon:'⚡', name:'Agente 5 · Automação',    role:'Disparos e agendamentos',          status:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa', bg:'#FFF4CC' },
-    { icon:'🤖', name:'Agente Atendente',         role:'Monitoramento de DMs e respostas', status:'Inativo — aguardando ativação', dot:'gray', dotC:'#aaa', bg:'#FFE0F0' },
+    { icon:'⚙️', name:'Agente 1 · Caçador',      role:'Mineração e qualificação',          bg:'#EDE8FF', ..._agStatus('ag1',      'Inativo — aguardando ativação') },
+    { icon:'📝', name:'Agente 2 · Roteirista',    role:'Estratégia e criação de cadências', bg:'#DFFCE9', ..._agStatus('ag2',      'Inativo — aguardando ativação') },
+    { icon:'🎨', name:'Agente 3 · Dir. Criativo', role:'Brief de conteúdo e direção visual',bg:'#FFE8D5', ..._agStatus('ag3',      'Inativo — aguardando ativação') },
+    { icon:'📊', name:'Agente 4 · Analista BI',   role:'Relatórios e análise preditiva',   bg:'#D8ECFF', ..._agStatus('ag4',      'Inativo — aguardando ativação') },
+    { icon:'⚡', name:'Agente 5 · Automação',     role:'Disparos e agendamentos',          bg:'#FFF4CC', ..._agStatus('ag5',      'Inativo — aguardando ativação') },
+    { icon:'🤖', name:'Agente Atendente',          role:'Monitoramento de DMs e respostas', bg:'#FFE0F0', ..._agStatus('ag_atend', 'Inativo — aguardando ativação') },
   ];
 
   // Pendências por segmento
@@ -7083,6 +7103,39 @@ async function syncFromCloud() {
     btn.disabled = false;
     setTimeout(() => { btn.textContent = orig; }, 4000);
   }
+}
+
+// Exclui em massa todos os leads selecionados (checkboxes)
+async function plBulkDelete(btn) {
+  const ids = Object.keys(plChecked).map(Number);
+  if (!ids.length) return;
+  const nomes = ids.map(id => { const l = Leads_Geral.find(x => x.id === id); return l ? l.nome : id; });
+  if (!confirm(`Excluir ${ids.length} lead(s) permanentemente?\n\n${nomes.slice(0,5).join('\n')}${nomes.length>5?`\n…e mais ${nomes.length-5}`:'`'}`)) return;
+  btn.textContent = `⏳ Excluindo ${ids.length}…`;
+  btn.disabled = true;
+  const BASE = 'https://ugc-mestre-crm.vercel.app';
+  let deleted = 0;
+  for (const leadId of ids) {
+    try {
+      const r = await fetch(`${BASE}/api/lead-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Hunter-Secret': 'Lucyrebua2@' },
+        body: JSON.stringify({ leadId }),
+      });
+      if (r.ok) {
+        Leads_Geral = Leads_Geral.filter(l => l.id !== leadId);
+        delete plChecked[leadId];
+        delete plLeadComments[leadId];
+        const row = document.getElementById(`pl-row-${leadId}`);
+        if (row) { row.style.transition = 'opacity .2s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 220); }
+        deleted++;
+      }
+    } catch(_) {}
+  }
+  _saveAll();
+  updateBadges();
+  renderDispatchPanel();
+  if (deleted < ids.length) alert(`${deleted} excluído(s). ${ids.length - deleted} falharam.`);
 }
 
 // Exclui lead do banco e remove da tela imediatamente

@@ -264,6 +264,16 @@ export default async function handler(req, res) {
   const normalize = (actId && ACTOR_NORMALIZERS[actId]) || normalizeGeneric;
   const source    = (actId && SOURCE_LABELS[actId]) || 'apify';
 
+  // ── Status: Ativo — Analisando ───────────────────────────────────────────
+  const baseUrl = process.env.PRODUCTION_URL || 'https://ugc-mestre-crm.vercel.app';
+  const _setStatus = (status, detail) => fetch(`${baseUrl}/api/agent-status`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Hunter-Secret': process.env.HUNTER_SECRET || '' },
+    body: JSON.stringify({ agent: 'ag1', status, detail }),
+  }).catch(() => {});
+
+  _setStatus('analisando', `Analisando ${items.length} lead(s) com Gemini…`);
+
   // Normaliza todos os itens primeiro
   const normalized = items.map(item => normalize(item)).filter(Boolean);
 
@@ -319,6 +329,9 @@ export default async function handler(req, res) {
         skipped++;
       }
     }
+
+    // ── Status: Concluído ────────────────────────────────────────────────────
+    _setStatus('concluido', `${inserted} lead(s) inserido(s) · ${analyzed} analisado(s) pelo Gemini`);
 
     return res.status(200).json({
       ok: true, source, actorId: actId, datasetId,
