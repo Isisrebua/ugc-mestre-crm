@@ -7368,9 +7368,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   CENTRAL DE AGENTES — Chat & Missões
-   Usa /api/agent-status (GET/POST) sem tabelas novas.
-   Histórico de mensagens: localStorage agentChat_<key>
+   CENTRAL DE AGENTES — Chat, Missões & Tarefas Programadas
+   Backend: /api/agent-status (GET/POST) — sem tabelas novas.
+   Tasks armazenadas em agent_ops.tasks (JSONB).
+   Histórico de chat: localStorage agentChat_<key>
    Polling a cada 6s apenas enquanto currentPage === 'agentes'
 ══════════════════════════════════════════════════════════════════ */
 
@@ -7383,11 +7384,16 @@ const AG_DEFS = [
   { key:'ag_atend', icon:'💬', name:'Agente Atendente',           role:'Monitoramento de DMs' },
 ];
 
-let _agSelected   = 'ag1';
-let _agStatusData = {};
-let _agPollTimer  = null;
+const AG_SCHEDULE_KEYWORDS = /\b(agende|agend[ae]|programe|programar|recorrente|automático|todo\s+\w+|toda\s+\w+|cada\s+\w+|diariamente|semanalmente|segunda|terça|quarta|quinta|sexta|sábado|domingo)\b/i;
 
-// ── Mapeia status → dot CSS e cor ────────────────────────────────
+const AG_FREQ_DAYS = { segunda:1, terça:2, quarta:3, quinta:4, sexta:5, sábado:6, domingo:0 };
+
+let _agSelected    = 'ag1';
+let _agStatusData  = {};
+let _agPollTimer   = null;
+let _agSchedFormOpen = false;
+
+// ── Helpers ───────────────────────────────────────────────────────
 function _agDot(status) {
   return { minerando:'green', analisando:'blue', concluido:'green', inativo:'gray' }[status] || 'gray';
 }
@@ -7396,8 +7402,9 @@ function _agStatusLabel(row) {
   const map = { minerando:'🔴 Minerando…', analisando:'🔵 Analisando com Gemini…', concluido:'✅ Concluído', inativo:'⚫ Inativo' };
   return (map[row.status] || '⚫ Inativo') + (row.detail ? ' · ' + row.detail : '');
 }
+function _agSecret() { return 'Lucyrebua2@'; }
 
-// ── Histórico de mensagens (localStorage) ─────────────────────────
+// ── Mensagens (localStorage) ──────────────────────────────────────
 function _agLoadMsgs(key) {
   try { return JSON.parse(localStorage.getItem('agentChat_' + key) || '[]'); } catch { return []; }
 }
@@ -7411,13 +7418,14 @@ function _agPushMsg(key, role, text) {
   return msgs;
 }
 
-// ── Renderiza lista de agentes (col esquerda) ─────────────────────
+// ── Coluna esquerda: lista de agentes ────────────────────────────
 function _agRenderList() {
   const el = document.getElementById('ag-list-items');
   if (!el) return;
   el.innerHTML = AG_DEFS.map(a => {
-    const row   = _agStatusData[a.key];
-    const dot   = _agDot(row?.status);
+    const row    = _agStatusData[a.key];
+    const dot    = _agDot(row?.status);
+    const tasks  = (row?.tasks || []).length;
     const active = a.key === _agSelected ? 'background:var(--cream-d);border-right:3px solid var(--blue-d);' : '';
     return `<div onclick="selectAgent('${a.key}')" style="padding:10px 12px;cursor:pointer;${active}border-bottom:1px solid var(--cream-dd)">
       <div style="display:flex;align-items:center;gap:7px">
@@ -7427,6 +7435,7 @@ function _agRenderList() {
           <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
             <div class="pulse-dot ${dot}" style="width:6px;height:6px"></div>
             <span style="font-size:9px;color:var(--txt-s)">${row?.status || 'inativo'}</span>
+            ${tasks ? `<span style="font-size:8px;background:#E8E0FF;color:#5B21B6;border-radius:50px;padding:1px 5px;font-weight:700">${tasks} tarefa${tasks>1?'s':''}</span>` : ''}
           </div>
         </div>
       </div>
@@ -7434,7 +7443,7 @@ function _agRenderList() {
   }).join('');
 }
 
-// ── Renderiza mensagens (col central) ────────────────────────────
+// ── Coluna central: mensagens ─────────────────────────────────────
 function _agRenderMsgs() {
   const el = document.getElementById('ag-chat-msgs');
   if (!el) return;
@@ -7443,7 +7452,11 @@ function _agRenderMsgs() {
     el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--txt-s)">
       <div style="font-size:32px;margin-bottom:8px">🤖</div>
       <div style="font-size:12px;font-weight:700">Nenhuma conversa ainda</div>
-      <div style="font-size:11px;margin-top:4px">Envie um comando para ativar o agente</div>
+      <div style="font-size:11px;margin-top:6px;line-height:1.5">Exemplos de comandos:<br>
+        <b>caçar moda fitness SP</b><br>
+        <b>agende todo sábado às 9h fitness</b><br>
+        <b>programe busca semanal de pet shop</b>
+      </div>
     </div>`;
     return;
   }
@@ -7451,75 +7464,164 @@ function _agRenderMsgs() {
     const isUser = m.role === 'user';
     const time   = new Date(m.ts).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
     return `<div style="display:flex;flex-direction:column;align-items:${isUser ? 'flex-end' : 'flex-start'};gap:2px">
-      <div style="max-width:80%;padding:9px 13px;border-radius:${isUser ? '14px 14px 3px 14px' : '14px 14px 14px 3px'};
+      <div style="max-width:82%;padding:9px 13px;border-radius:${isUser ? '14px 14px 3px 14px' : '14px 14px 14px 3px'};
         background:${isUser ? 'var(--blue-d)' : 'var(--cream-d)'};
         color:${isUser ? '#fff' : 'var(--txt)'};font-size:12px;line-height:1.5;word-break:break-word">
         ${m.text.replace(/\n/g,'<br>')}
       </div>
-      <span style="font-size:9px;color:var(--txt-s);padding:0 4px">${isUser ? 'Ísis' : AG_DEFS.find(a=>a.key===_agSelected)?.icon + ' Ag'} · ${time}</span>
+      <span style="font-size:9px;color:var(--txt-s);padding:0 4px">${isUser ? 'Ísis' : (AG_DEFS.find(a=>a.key===_agSelected)?.icon||'🤖') + ' Agente'} · ${time}</span>
     </div>`;
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
-// ── Renderiza painel de ações em curso (col direita) ─────────────
+// ── Coluna direita: ações em curso + tarefas programadas ──────────
 function _agRenderOps() {
   const el = document.getElementById('ag-ops-detail');
   if (!el) return;
-  const row = _agStatusData[_agSelected];
-  const def = AG_DEFS.find(a => a.key === _agSelected);
+  const row  = _agStatusData[_agSelected];
+  const cur  = row?.status || 'inativo';
+  const tasks = Array.isArray(row?.tasks) ? row.tasks : [];
 
   const steps = [
-    { id:'minerando',  label:'Mineração de dados',     icon:'🔍' },
-    { id:'analisando', label:'Análise com Gemini',      icon:'🧠' },
-    { id:'concluido',  label:'Leads inseridos no CRM',  icon:'✅' },
+    { id:'minerando',  label:'Mineração de dados',    icon:'🔍' },
+    { id:'analisando', label:'Análise com Gemini',     icon:'🧠' },
+    { id:'concluido',  label:'Leads inseridos no CRM', icon:'✅' },
   ];
-  const cur = row?.status || 'inativo';
 
   const stepsHTML = steps.map(s => {
-    let dotStyle = 'background:#ccc';
-    let textColor = 'color:var(--txt-s)';
-    if (cur === s.id) { dotStyle = 'background:var(--blue-d);box-shadow:0 0 0 3px #C7D9FF'; textColor = 'color:var(--txt);font-weight:700'; }
-    else if (cur === 'concluido') { dotStyle = 'background:var(--mint-d)'; textColor = 'color:var(--txt-s)'; }
+    let dot  = 'background:#ccc';
+    let text = 'color:var(--txt-s)';
+    if (cur === s.id)        { dot = 'background:var(--blue-d);box-shadow:0 0 0 3px #C7D9FF'; text = 'color:var(--txt);font-weight:700'; }
+    else if (cur==='concluido') { dot = 'background:var(--mint-d)'; }
     return `<div style="display:flex;align-items:center;gap:8px">
-      <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;${dotStyle}"></div>
-      <span style="font-size:11px;${textColor}">${s.icon} ${s.label}</span>
+      <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;${dot}"></div>
+      <span style="font-size:11px;${text}">${s.icon} ${s.label}</span>
     </div>`;
   }).join('');
 
-  const runLink = row?.apify_url
-    ? `<a href="${row.apify_url}" target="_blank" style="font-size:10px;color:var(--blue-d);text-decoration:none;display:block;margin-top:4px">↗ Ver no Apify Console</a>`
-    : '';
-  const runId = row?.run_id
-    ? `<div style="font-size:9px;color:var(--txt-s);margin-top:4px;word-break:break-all">Run: ${row.run_id}</div>`
-    : '';
-  const updAt = row?.updated_at
-    ? `<div style="font-size:9px;color:var(--txt-s);margin-top:2px">Atualizado: ${new Date(row.updated_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>`
-    : '';
+  const runLink = row?.apify_url ? `<a href="${row.apify_url}" target="_blank" style="font-size:10px;color:var(--blue-d);text-decoration:none;display:block;margin-top:3px">↗ Ver no Apify Console</a>` : '';
+  const runId   = row?.run_id   ? `<div style="font-size:9px;color:var(--txt-s);margin-top:3px;word-break:break-all">Run: ${row.run_id}</div>` : '';
+  const updAt   = row?.updated_at ? `<div style="font-size:9px;color:var(--txt-s);margin-top:2px">Atualizado: ${new Date(row.updated_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>` : '';
+
+  // Formulário de agendamento (toggle)
+  const formHTML = _agSchedFormOpen ? `
+    <div id="ag-sched-form" style="background:var(--cream-d);border:1.5px solid var(--blue);border-radius:var(--r-md);padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:11px;font-weight:800;color:var(--blue-d)">⚙️ Nova Tarefa Recorrente</div>
+      <input id="asf-nicho" placeholder="Nicho (ex: moda fitness)" style="padding:7px 9px;border:1.5px solid var(--cream-dd);border-radius:var(--r-sm);font-size:11px;font-family:inherit;background:var(--cream);width:100%;box-sizing:border-box">
+      <select id="asf-canal" style="padding:7px 9px;border:1.5px solid var(--cream-dd);border-radius:var(--r-sm);font-size:11px;font-family:inherit;background:var(--cream)">
+        <option value="instagram">📷 Instagram</option>
+        <option value="google_maps">📍 Google Maps</option>
+        <option value="linkedin">💼 LinkedIn</option>
+      </select>
+      <select id="asf-freq" style="padding:7px 9px;border:1.5px solid var(--cream-dd);border-radius:var(--r-sm);font-size:11px;font-family:inherit;background:var(--cream)">
+        <option value="diaria">Diariamente</option>
+        <option value="semanal" selected>Semanalmente</option>
+      </select>
+      <select id="asf-dia" style="padding:7px 9px;border:1.5px solid var(--cream-dd);border-radius:var(--r-sm);font-size:11px;font-family:inherit;background:var(--cream)">
+        <option value="segunda">Segunda-feira</option>
+        <option value="terça">Terça-feira</option>
+        <option value="quarta">Quarta-feira</option>
+        <option value="quinta">Quinta-feira</option>
+        <option value="sexta">Sexta-feira</option>
+        <option value="sábado" selected>Sábado</option>
+        <option value="domingo">Domingo</option>
+      </select>
+      <input id="asf-hora" type="time" value="09:00" style="padding:7px 9px;border:1.5px solid var(--cream-dd);border-radius:var(--r-sm);font-size:11px;font-family:inherit;background:var(--cream)">
+      <input id="asf-limite" type="number" value="30" min="10" max="100" placeholder="Qtd leads" style="padding:7px 9px;border:1.5px solid var(--cream-dd);border-radius:var(--r-sm);font-size:11px;font-family:inherit;background:var(--cream)">
+      <div style="display:flex;gap:6px">
+        <button onclick="_agSaveTask()" style="flex:1;padding:8px;background:var(--blue-d);color:#fff;border:none;border-radius:var(--r-sm);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">✅ Salvar</button>
+        <button onclick="_agToggleSchedForm(false)" style="padding:8px 10px;background:var(--cream-dd);border:none;border-radius:var(--r-sm);font-size:11px;cursor:pointer;font-family:inherit">✕</button>
+      </div>
+    </div>` : '';
+
+  // Lista de tarefas agendadas
+  const tasksHTML = tasks.length ? `
+    <div style="font-size:10px;font-weight:800;color:var(--txt-s);text-transform:uppercase;letter-spacing:.06em;margin-top:4px">Tarefas Agendadas</div>
+    ${tasks.map(t => `
+      <div style="background:linear-gradient(135deg,#EDE8FF,#E0F0FF);border-radius:var(--r-md);padding:9px 11px;display:flex;align-items:flex-start;gap:7px">
+        <div style="font-size:14px;flex-shrink:0">${t.canal==='instagram'?'📷':t.canal==='google_maps'?'📍':'💼'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--txt)">${t.nicho || '–'}</div>
+          <div style="font-size:10px;color:var(--txt-s);margin-top:1px">${t.freq==='diaria'?'Diariamente':'Todo '+t.dia} · ${t.hora} · ${t.limite||30} leads</div>
+        </div>
+        <button onclick="_agRemoveTask('${t.id}')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--txt-s);padding:0;flex-shrink:0" title="Remover">🗑</button>
+      </div>`).join('')}` : '';
 
   el.innerHTML = `
     <div style="background:var(--cream-d);border-radius:var(--r-md);padding:10px 12px;display:flex;flex-direction:column;gap:8px">
       ${stepsHTML}
     </div>
-    ${row?.detail ? `<div style="font-size:11px;color:var(--txt-m);padding:2px 2px;line-height:1.4">${row.detail}</div>` : ''}
+    ${row?.detail ? `<div style="font-size:11px;color:var(--txt-m);line-height:1.4">${row.detail}</div>` : ''}
     ${runId}${runLink}${updAt}
     <button onclick="setPage('prelista',document.getElementById('nav-prelista'))"
-      style="margin-top:4px;padding:9px 12px;background:var(--blue-p);color:var(--blue-d);border:1.5px solid var(--blue);border-radius:var(--r-md);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center">
+      style="padding:9px 12px;background:var(--blue-p);color:var(--blue-d);border:1.5px solid var(--blue);border-radius:var(--r-md);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center">
       → Ver Pré-Lista
     </button>
+    <button onclick="_agToggleSchedForm(true)"
+      style="padding:9px 12px;background:linear-gradient(135deg,#EDE8FF,#E0F0FF);color:#5B21B6;border:1.5px solid #C4B5FD;border-radius:var(--r-md);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center">
+      ⚙️ Programar Tarefa Recorrente
+    </button>
+    ${formHTML}
+    ${tasksHTML}
   `;
 }
 
-// ── Atualiza header do chat com agente selecionado ────────────────
+// ── Abre/fecha formulário de agendamento ──────────────────────────
+function _agToggleSchedForm(open) {
+  _agSchedFormOpen = open;
+  _agRenderOps();
+}
+
+// ── Salva nova tarefa no backend ──────────────────────────────────
+async function _agSaveTask(overrides) {
+  const task = overrides || {
+    nicho:  (document.getElementById('asf-nicho')?.value  || '').trim(),
+    canal:   document.getElementById('asf-canal')?.value  || 'instagram',
+    freq:    document.getElementById('asf-freq')?.value   || 'semanal',
+    dia:     document.getElementById('asf-dia')?.value    || 'sábado',
+    hora:    document.getElementById('asf-hora')?.value   || '09:00',
+    limite: parseInt(document.getElementById('asf-limite')?.value || '30', 10),
+  };
+  if (!task.nicho) { alert('Informe o nicho da tarefa.'); return; }
+
+  try {
+    const r = await fetch('/api/agent-status', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Hunter-Secret': _agSecret() },
+      body: JSON.stringify({ action:'add_task', agent: _agSelected, task }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      _agSchedFormOpen = false;
+      _agPushMsg(_agSelected, 'agent', `✅ Tarefa programada!\n\nNicho: ${task.nicho}\nCanal: ${task.canal}\nFrequência: ${task.freq === 'diaria' ? 'Diariamente' : 'Todo ' + task.dia} às ${task.hora}\nLeads por rodada: ${task.limite}`);
+      _agRenderMsgs();
+      await _agPoll();
+    }
+  } catch(e) {
+    _agPushMsg(_agSelected, 'agent', '⚠️ Erro ao salvar tarefa. Tente novamente.');
+    _agRenderMsgs();
+  }
+}
+
+// ── Remove tarefa do backend ──────────────────────────────────────
+async function _agRemoveTask(taskId) {
+  if (!confirm('Remover esta tarefa agendada?')) return;
+  try {
+    await fetch('/api/agent-status', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Hunter-Secret': _agSecret() },
+      body: JSON.stringify({ action:'remove_task', agent: _agSelected, taskId }),
+    });
+    await _agPoll();
+  } catch {}
+}
+
+// ── Header do chat ────────────────────────────────────────────────
 function _agRenderHeader() {
   const def = AG_DEFS.find(a => a.key === _agSelected);
   const row = _agStatusData[_agSelected];
-  const el  = {
-    icon:   document.getElementById('ag-chat-icon'),
-    name:   document.getElementById('ag-chat-name'),
-    dot:    document.getElementById('ag-chat-dot'),
-    status: document.getElementById('ag-chat-status'),
-  };
+  const el  = { icon: document.getElementById('ag-chat-icon'), name: document.getElementById('ag-chat-name'), dot: document.getElementById('ag-chat-dot'), status: document.getElementById('ag-chat-status') };
   if (!el.icon) return;
   el.icon.textContent   = def?.icon || '🤖';
   el.name.textContent   = def?.name || '';
@@ -7527,18 +7629,45 @@ function _agRenderHeader() {
   el.status.textContent = _agStatusLabel(row);
 }
 
-// ── Seleciona agente na lista ─────────────────────────────────────
+// ── Seleciona agente ──────────────────────────────────────────────
 function selectAgent(key) {
   _agSelected = key;
+  _agSchedFormOpen = false;
   _agRenderList();
   _agRenderHeader();
   _agRenderMsgs();
   _agRenderOps();
 }
 
-// ── Envia comando da Ísis ─────────────────────────────────────────
+// ── Detecta intenção de agendamento no texto ──────────────────────
+function _agParseScheduleIntent(text) {
+  if (!AG_SCHEDULE_KEYWORDS.test(text)) return null;
+
+  const lower = text.toLowerCase();
+  let dia = 'sábado', hora = '09:00', freq = 'semanal';
+
+  Object.keys(AG_FREQ_DAYS).forEach(d => { if (lower.includes(d)) dia = d; });
+
+  const horaMatch = lower.match(/(\d{1,2})h(\d{2})?|(\d{1,2}):(\d{2})/);
+  if (horaMatch) {
+    const h = horaMatch[1] || horaMatch[3];
+    const m = horaMatch[2] || horaMatch[4] || '00';
+    hora = h.padStart(2,'0') + ':' + m.padStart(2,'0');
+  }
+  if (/diariamente|todo\s+dia|cada\s+dia/i.test(text)) freq = 'diaria';
+
+  // Extrai nicho: remove palavras de agendamento e pega o resto
+  const nicho = text
+    .replace(/agende|agend[ae]|programe|programar|todo\s+\w+|toda\s+\w+|cada\s+\w+|diariamente|semanalmente|às?\s+\d+[h:]\d*/gi, '')
+    .replace(/segunda|terça|quarta|quinta|sexta|sábado|domingo/gi, '')
+    .trim().replace(/\s+/g,' ') || 'leads';
+
+  return { nicho, canal:'instagram', freq, dia, hora, limite: 30 };
+}
+
+// ── Envia comando ─────────────────────────────────────────────────
 async function agentSendCommand() {
-  const inp = document.getElementById('ag-chat-input');
+  const inp  = document.getElementById('ag-chat-input');
   const text = (inp?.value || '').trim();
   if (!text) return;
   inp.value = '';
@@ -7546,35 +7675,46 @@ async function agentSendCommand() {
   _agPushMsg(_agSelected, 'user', text);
   _agRenderMsgs();
 
-  // Agente 1: dispara hunt
-  if (_agSelected === 'ag1') {
-    const agMsg = `Recebi o comando. Iniciando missão: "${text}"\n\nEstou montando o plano de busca e disparando o Apify agora. Os leads chegarão na Pré-Lista em alguns minutos. 🔍`;
-    _agPushMsg('ag1', 'agent', agMsg);
+  if (_agSelected !== 'ag1') {
+    _agPushMsg(_agSelected, 'agent', 'Agente ainda não está ativo. Apenas o Agente 1 · Caçador está operacional no momento.');
     _agRenderMsgs();
-
-    try {
-      const secret = 'Lucyrebua2@';
-      const res = await fetch('/api/agent1-hunt', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'X-Hunter-Secret': secret, 'X-Priority':'high' },
-        body: JSON.stringify({ nicho: text, limite: 30, source: 'instagram' }),
-      });
-      const data = await res.json();
-      const confirm = data.ok
-        ? `✅ Missão disparada com sucesso!\n\nRun ID: ${data.runId || '–'}\nAcompanhe o painel "Ações em Curso" ao lado. Os leads aparecerão na Pré-Lista automaticamente.`
-        : `⚠️ Erro ao iniciar missão: ${data.error || 'resposta inválida do servidor'}`;
-      _agPushMsg('ag1', 'agent', confirm);
-    } catch(e) {
-      _agPushMsg('ag1', 'agent', '⚠️ Falha na conexão com o servidor. Verifique sua internet e tente novamente.');
-    }
-    _agRenderMsgs();
-  } else {
-    _agPushMsg(_agSelected, 'agent', `Agente ainda não está ativo. Apenas o Agente 1 · Caçador está operacional no momento.`);
-    _agRenderMsgs();
+    return;
   }
+
+  // ── Intenção de agendamento? ──────────────────────────────────
+  const schedIntent = _agParseScheduleIntent(text);
+  if (schedIntent) {
+    _agPushMsg('ag1', 'agent',
+      `Entendi! Detectei uma instrução de agendamento:\n\n` +
+      `Nicho: ${schedIntent.nicho}\nFrequência: ${schedIntent.freq === 'diaria' ? 'Diária' : 'Semanal — todo ' + schedIntent.dia}\nHorário: ${schedIntent.hora}\n\n` +
+      `Registrando tarefa recorrente agora…`);
+    _agRenderMsgs();
+    await _agSaveTask(schedIntent);
+    return;
+  }
+
+  // ── Disparo imediato ──────────────────────────────────────────
+  _agPushMsg('ag1', 'agent', `Recebi o comando. Iniciando missão: "${text}"\n\nDisparando o Apify agora. Os leads chegarão na Pré-Lista em alguns minutos. 🔍`);
+  _agRenderMsgs();
+
+  try {
+    const res  = await fetch('/api/agent1-hunt', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Hunter-Secret': _agSecret(), 'X-Priority':'high' },
+      body: JSON.stringify({ nicho: text, limite: 30, source: 'instagram' }),
+    });
+    const data = await res.json();
+    const msg  = data.ok
+      ? `✅ Missão disparada!\n\nRun ID: ${data.runId || '–'}\nAcompanhe o painel ao lado. Os leads aparecerão na Pré-Lista automaticamente.`
+      : `⚠️ Erro: ${data.error || 'resposta inválida'}`;
+    _agPushMsg('ag1', 'agent', msg);
+  } catch {
+    _agPushMsg('ag1', 'agent', '⚠️ Falha na conexão. Verifique sua internet e tente novamente.');
+  }
+  _agRenderMsgs();
 }
 
-// ── Polling de status (GET /api/agent-status a cada 6s) ──────────
+// ── Polling de status a cada 6s ───────────────────────────────────
 async function _agPoll() {
   if (currentPage !== 'agentes') return;
   try {
@@ -7587,24 +7727,18 @@ async function _agPoll() {
       _agRenderHeader();
       _agRenderOps();
 
-      // Atualiza badge se ag1 está ativo
-      const ag1 = _agStatusData['ag1'];
+      const ag1  = _agStatusData['ag1'];
       const badge = document.getElementById('nb-agentes');
       if (badge) {
-        if (ag1 && (ag1.status === 'minerando' || ag1.status === 'analisando')) {
-          badge.style.display = '';
-          badge.style.background = '#2E7D32';
-          badge.style.color = '#fff';
-          badge.textContent = '●';
-        } else {
-          badge.style.display = 'none';
-        }
+        const active = ag1 && (ag1.status === 'minerando' || ag1.status === 'analisando');
+        badge.style.display = active ? '' : 'none';
+        if (active) { badge.style.background='#2E7D32'; badge.style.color='#fff'; badge.textContent='●'; }
       }
     }
   } catch {}
 }
 
-// ── Entry-point chamado pelo setPage('agentes') ───────────────────
+// ── Entry-point ───────────────────────────────────────────────────
 function renderAgentes() {
   _agRenderList();
   _agRenderHeader();

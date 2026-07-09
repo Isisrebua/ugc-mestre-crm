@@ -1,9 +1,8 @@
 // api/agent-status.js — Vercel Serverless Function
-// GET  /api/agent-status        → retorna status atual de todos os agentes
-// POST /api/agent-status        → atualiza status de um agente
-// Body POST: { agent, status, detail, runId, apifyUrl }
-//
-// Cria a tabela agent_ops automaticamente se não existir.
+// GET  /api/agent-status                        → retorna status e tasks de todos os agentes
+// POST /api/agent-status { agent, status, ... } → atualiza status de um agente
+// POST /api/agent-status { action:'add_task', agent, task }    → adiciona tarefa agendada
+// POST /api/agent-status { action:'remove_task', agent, taskId } → remove tarefa agendada
 
 import { Client } from 'pg';
 
@@ -16,8 +15,12 @@ const CREATE_TABLE = `
     detail      TEXT,
     run_id      TEXT,
     apify_url   TEXT,
+    tasks       JSONB DEFAULT '[]',
     updated_at  TIMESTAMPTZ DEFAULT NOW()
   )`;
+
+// Garante coluna tasks em instâncias antigas da tabela
+const ADD_COL = `ALTER TABLE agent_ops ADD COLUMN IF NOT EXISTS tasks JSONB DEFAULT '[]'`;
 
 // Seed com os 6 agentes se a tabela estiver vazia
 const SEED = `
@@ -34,6 +37,7 @@ async function getClient() {
   const client = new Client({ connectionString: process.env.DATABASE_URL_EXTERNAL, ssl: { rejectUnauthorized: false } });
   await client.connect();
   await client.query(CREATE_TABLE);
+  await client.query(ADD_COL);
   await client.query(SEED);
   return client;
 }
@@ -60,9 +64,44 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const body   = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-      const { agent, status, detail, runId, apifyUrl } = body;
-      if (!agent || !status) return res.status(400).json({ error: 'agent e status obrigatórios' });
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      const { action, agent } = body;
+
+      if (!agent) return res.status(400).json({ error: 'agent obrigatório' });
+
+      // ── Adiciona tarefa agendada ──────────────────────────────────
+      if (action === 'add_task') {
+        const task = body.task;
+        if (!task) return res.status(400).json({ error: 'task obrigatória' });
+        task.id = task.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        task.criadoEm = new Date().toISOString();
+        await client.query(`
+          UPDATE agent_ops
+          SET tasks = COALESCE(tasks,'[]'::jsonb) || $1::jsonb, updated_at = NOW()
+          WHERE agent = $2
+        `, [JSON.stringify([task]), agent]);
+        return res.status(200).json({ ok: true, taskId: task.id });
+      }
+
+      // ── Remove tarefa agendada ────────────────────────────────────
+      if (action === 'remove_task') {
+        const { taskId } = body;
+        if (!taskId) return res.status(400).json({ error: 'taskId obrigatório' });
+        await client.query(`
+          UPDATE agent_ops
+          SET tasks = (
+            SELECT COALESCE(jsonb_agg(t),'[]'::jsonb)
+            FROM jsonb_array_elements(COALESCE(tasks,'[]'::jsonb)) t
+            WHERE t->>'id' <> $1
+          ), updated_at = NOW()
+          WHERE agent = $2
+        `, [taskId, agent]);
+        return res.status(200).json({ ok: true });
+      }
+
+      // ── Atualiza status do agente (comportamento original) ────────
+      const { status, detail, runId, apifyUrl } = body;
+      if (!status) return res.status(400).json({ error: 'status obrigatório' });
 
       await client.query(`
         INSERT INTO agent_ops (agent, status, detail, run_id, apify_url, updated_at)
