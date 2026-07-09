@@ -1284,6 +1284,14 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
       </div>
     </button>
 
+    <button class="nav-item" id="nav-agentes" onclick="setPage('agentes',this)">
+      <div class="nav-item-inner">
+        <span class="nav-icon">🤖</span>
+        <span class="nav-label">Chat Agentes</span>
+        <span class="nav-badge" id="nb-agentes" style="display:none">●</span>
+      </div>
+    </button>
+
     <div class="sb-section-label">Esteira de Produção</div>
 
     <button class="nav-item" id="nav-prelista" onclick="setPage('prelista',this)">
@@ -1911,6 +1919,49 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var
       </div>
     </div>
 
+    <!-- ══ CHAT AGENTES ══════════════════════════════════════════════ -->
+    <div class="page" id="page-agentes" style="flex-direction:row;gap:0;overflow:hidden">
+
+      <!-- Coluna esquerda: lista de agentes -->
+      <div id="ag-col-list" style="width:170px;flex-shrink:0;border-right:1.5px solid var(--cream-dd);display:flex;flex-direction:column;background:var(--cream);overflow-y:auto">
+        <div style="padding:12px 12px 6px;font-size:10px;font-weight:800;color:var(--txt-s);text-transform:uppercase;letter-spacing:.08em">Agentes</div>
+        <div id="ag-list-items"></div>
+      </div>
+
+      <!-- Coluna central: chat -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
+        <!-- header do agente ativo -->
+        <div id="ag-chat-header" style="padding:12px 16px;border-bottom:1.5px solid var(--cream-dd);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--cream)">
+          <div id="ag-chat-icon" style="font-size:22px"></div>
+          <div style="flex:1;min-width:0">
+            <div id="ag-chat-name" style="font-size:13px;font-weight:800;color:var(--txt)"></div>
+            <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
+              <div id="ag-chat-dot" class="pulse-dot gray"></div>
+              <span id="ag-chat-status" style="font-size:10px;color:var(--txt-s)">Inativo</span>
+            </div>
+          </div>
+        </div>
+        <!-- mensagens -->
+        <div id="ag-chat-msgs" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px"></div>
+        <!-- input -->
+        <div style="padding:10px 14px;border-top:1.5px solid var(--cream-dd);display:flex;gap:8px;align-items:flex-end;background:var(--cream);flex-shrink:0">
+          <textarea id="ag-chat-input" rows="2"
+            placeholder="Envie um comando para o agente… ex: caçar moda fitness SP 30 leads"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agentSendCommand();}"
+            style="flex:1;border:1.5px solid var(--cream-dd);border-radius:var(--r-md);padding:9px 12px;font-size:12px;font-family:inherit;background:var(--cream-d);resize:none;outline:none;color:var(--txt);line-height:1.4"></textarea>
+          <button onclick="agentSendCommand()" style="padding:9px 16px;background:var(--blue-d);color:#fff;border:none;border-radius:var(--r-md);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;height:54px">📤<br><span style="font-size:9px">Enviar</span></button>
+        </div>
+      </div>
+
+      <!-- Coluna direita: ações programadas / status ao vivo -->
+      <div id="ag-col-ops" style="width:210px;flex-shrink:0;border-left:1.5px solid var(--cream-dd);display:flex;flex-direction:column;background:var(--cream);overflow-y:auto">
+        <div style="padding:12px 12px 6px;font-size:10px;font-weight:800;color:var(--txt-s);text-transform:uppercase;letter-spacing:.08em">Ações em Curso</div>
+        <div id="ag-ops-detail" style="padding:0 10px 12px;display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
+    </div>
+    <!-- ══ /CHAT AGENTES ═════════════════════════════════════════════ -->
+
   </div>
 </div>
 </div><!-- /app -->
@@ -2511,6 +2562,7 @@ const PAGE_TITLES = {
   calls:'📞 Calls Agendadas',
   clientes:'💰 Clientes Ativos · Receita Real',
   banco:'Banco de Dados Geral · Todos os Leads',
+  agentes:'🤖 Central de Agentes · Chat & Missões',
 };
 
 function setPage(page, el) {
@@ -2550,6 +2602,7 @@ function renderPage(page) {
   else if (page === 'standby')    renderStandby();
   else if (page === 'remarketing') renderRemarketing();
   else if (page === 'isis')       renderIsisLeads();
+  else if (page === 'agentes')    renderAgentes();
   else {
     const stageKey = { qualificados:'qualificado' }[page];
     if (stageKey) renderLeadList(page, Leads_Geral.filter(l => l.stage === stageKey));
@@ -7313,6 +7366,255 @@ document.addEventListener('DOMContentLoaded', function() {
     hamburger.addEventListener('click', () => sidebar.classList.toggle('mobile-open'));
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   CENTRAL DE AGENTES — Chat & Missões
+   Usa /api/agent-status (GET/POST) sem tabelas novas.
+   Histórico de mensagens: localStorage agentChat_<key>
+   Polling a cada 6s apenas enquanto currentPage === 'agentes'
+══════════════════════════════════════════════════════════════════ */
+
+const AG_DEFS = [
+  { key:'ag1',      icon:'⚙️', name:'Agente 1 · Caçador',       role:'Mineração e qualificação' },
+  { key:'ag2',      icon:'📝', name:'Agente 2 · Roteirista',     role:'Estratégia e cadências' },
+  { key:'ag3',      icon:'🎨', name:'Agente 3 · Dir. Criativo',  role:'Brief de conteúdo' },
+  { key:'ag4',      icon:'📊', name:'Agente 4 · Analista BI',    role:'Relatórios e previsões' },
+  { key:'ag5',      icon:'⚡', name:'Agente 5 · Automação',      role:'Disparos e agendamentos' },
+  { key:'ag_atend', icon:'💬', name:'Agente Atendente',           role:'Monitoramento de DMs' },
+];
+
+let _agSelected   = 'ag1';
+let _agStatusData = {};
+let _agPollTimer  = null;
+
+// ── Mapeia status → dot CSS e cor ────────────────────────────────
+function _agDot(status) {
+  return { minerando:'green', analisando:'blue', concluido:'green', inativo:'gray' }[status] || 'gray';
+}
+function _agStatusLabel(row) {
+  if (!row) return 'Inativo — aguardando ativação';
+  const map = { minerando:'🔴 Minerando…', analisando:'🔵 Analisando com Gemini…', concluido:'✅ Concluído', inativo:'⚫ Inativo' };
+  return (map[row.status] || '⚫ Inativo') + (row.detail ? ' · ' + row.detail : '');
+}
+
+// ── Histórico de mensagens (localStorage) ─────────────────────────
+function _agLoadMsgs(key) {
+  try { return JSON.parse(localStorage.getItem('agentChat_' + key) || '[]'); } catch { return []; }
+}
+function _agSaveMsgs(key, msgs) {
+  localStorage.setItem('agentChat_' + key, JSON.stringify(msgs.slice(-80)));
+}
+function _agPushMsg(key, role, text) {
+  const msgs = _agLoadMsgs(key);
+  msgs.push({ role, text, ts: Date.now() });
+  _agSaveMsgs(key, msgs);
+  return msgs;
+}
+
+// ── Renderiza lista de agentes (col esquerda) ─────────────────────
+function _agRenderList() {
+  const el = document.getElementById('ag-list-items');
+  if (!el) return;
+  el.innerHTML = AG_DEFS.map(a => {
+    const row   = _agStatusData[a.key];
+    const dot   = _agDot(row?.status);
+    const active = a.key === _agSelected ? 'background:var(--cream-d);border-right:3px solid var(--blue-d);' : '';
+    return `<div onclick="selectAgent('${a.key}')" style="padding:10px 12px;cursor:pointer;${active}border-bottom:1px solid var(--cream-dd)">
+      <div style="display:flex;align-items:center;gap:7px">
+        <span style="font-size:16px">${a.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</div>
+          <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
+            <div class="pulse-dot ${dot}" style="width:6px;height:6px"></div>
+            <span style="font-size:9px;color:var(--txt-s)">${row?.status || 'inativo'}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Renderiza mensagens (col central) ────────────────────────────
+function _agRenderMsgs() {
+  const el = document.getElementById('ag-chat-msgs');
+  if (!el) return;
+  const msgs = _agLoadMsgs(_agSelected);
+  if (!msgs.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--txt-s)">
+      <div style="font-size:32px;margin-bottom:8px">🤖</div>
+      <div style="font-size:12px;font-weight:700">Nenhuma conversa ainda</div>
+      <div style="font-size:11px;margin-top:4px">Envie um comando para ativar o agente</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = msgs.map(m => {
+    const isUser = m.role === 'user';
+    const time   = new Date(m.ts).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    return `<div style="display:flex;flex-direction:column;align-items:${isUser ? 'flex-end' : 'flex-start'};gap:2px">
+      <div style="max-width:80%;padding:9px 13px;border-radius:${isUser ? '14px 14px 3px 14px' : '14px 14px 14px 3px'};
+        background:${isUser ? 'var(--blue-d)' : 'var(--cream-d)'};
+        color:${isUser ? '#fff' : 'var(--txt)'};font-size:12px;line-height:1.5;word-break:break-word">
+        ${m.text.replace(/\n/g,'<br>')}
+      </div>
+      <span style="font-size:9px;color:var(--txt-s);padding:0 4px">${isUser ? 'Ísis' : AG_DEFS.find(a=>a.key===_agSelected)?.icon + ' Ag'} · ${time}</span>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Renderiza painel de ações em curso (col direita) ─────────────
+function _agRenderOps() {
+  const el = document.getElementById('ag-ops-detail');
+  if (!el) return;
+  const row = _agStatusData[_agSelected];
+  const def = AG_DEFS.find(a => a.key === _agSelected);
+
+  const steps = [
+    { id:'minerando',  label:'Mineração de dados',     icon:'🔍' },
+    { id:'analisando', label:'Análise com Gemini',      icon:'🧠' },
+    { id:'concluido',  label:'Leads inseridos no CRM',  icon:'✅' },
+  ];
+  const cur = row?.status || 'inativo';
+
+  const stepsHTML = steps.map(s => {
+    let dotStyle = 'background:#ccc';
+    let textColor = 'color:var(--txt-s)';
+    if (cur === s.id) { dotStyle = 'background:var(--blue-d);box-shadow:0 0 0 3px #C7D9FF'; textColor = 'color:var(--txt);font-weight:700'; }
+    else if (cur === 'concluido') { dotStyle = 'background:var(--mint-d)'; textColor = 'color:var(--txt-s)'; }
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;${dotStyle}"></div>
+      <span style="font-size:11px;${textColor}">${s.icon} ${s.label}</span>
+    </div>`;
+  }).join('');
+
+  const runLink = row?.apify_url
+    ? `<a href="${row.apify_url}" target="_blank" style="font-size:10px;color:var(--blue-d);text-decoration:none;display:block;margin-top:4px">↗ Ver no Apify Console</a>`
+    : '';
+  const runId = row?.run_id
+    ? `<div style="font-size:9px;color:var(--txt-s);margin-top:4px;word-break:break-all">Run: ${row.run_id}</div>`
+    : '';
+  const updAt = row?.updated_at
+    ? `<div style="font-size:9px;color:var(--txt-s);margin-top:2px">Atualizado: ${new Date(row.updated_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>`
+    : '';
+
+  el.innerHTML = `
+    <div style="background:var(--cream-d);border-radius:var(--r-md);padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+      ${stepsHTML}
+    </div>
+    ${row?.detail ? `<div style="font-size:11px;color:var(--txt-m);padding:2px 2px;line-height:1.4">${row.detail}</div>` : ''}
+    ${runId}${runLink}${updAt}
+    <button onclick="setPage('prelista',document.getElementById('nav-prelista'))"
+      style="margin-top:4px;padding:9px 12px;background:var(--blue-p);color:var(--blue-d);border:1.5px solid var(--blue);border-radius:var(--r-md);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center">
+      → Ver Pré-Lista
+    </button>
+  `;
+}
+
+// ── Atualiza header do chat com agente selecionado ────────────────
+function _agRenderHeader() {
+  const def = AG_DEFS.find(a => a.key === _agSelected);
+  const row = _agStatusData[_agSelected];
+  const el  = {
+    icon:   document.getElementById('ag-chat-icon'),
+    name:   document.getElementById('ag-chat-name'),
+    dot:    document.getElementById('ag-chat-dot'),
+    status: document.getElementById('ag-chat-status'),
+  };
+  if (!el.icon) return;
+  el.icon.textContent   = def?.icon || '🤖';
+  el.name.textContent   = def?.name || '';
+  el.dot.className      = 'pulse-dot ' + _agDot(row?.status);
+  el.status.textContent = _agStatusLabel(row);
+}
+
+// ── Seleciona agente na lista ─────────────────────────────────────
+function selectAgent(key) {
+  _agSelected = key;
+  _agRenderList();
+  _agRenderHeader();
+  _agRenderMsgs();
+  _agRenderOps();
+}
+
+// ── Envia comando da Ísis ─────────────────────────────────────────
+async function agentSendCommand() {
+  const inp = document.getElementById('ag-chat-input');
+  const text = (inp?.value || '').trim();
+  if (!text) return;
+  inp.value = '';
+
+  _agPushMsg(_agSelected, 'user', text);
+  _agRenderMsgs();
+
+  // Agente 1: dispara hunt
+  if (_agSelected === 'ag1') {
+    const agMsg = `Recebi o comando. Iniciando missão: "${text}"\n\nEstou montando o plano de busca e disparando o Apify agora. Os leads chegarão na Pré-Lista em alguns minutos. 🔍`;
+    _agPushMsg('ag1', 'agent', agMsg);
+    _agRenderMsgs();
+
+    try {
+      const secret = 'Lucyrebua2@';
+      const res = await fetch('/api/agent1-hunt', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-Hunter-Secret': secret, 'X-Priority':'high' },
+        body: JSON.stringify({ nicho: text, limite: 30, source: 'instagram' }),
+      });
+      const data = await res.json();
+      const confirm = data.ok
+        ? `✅ Missão disparada com sucesso!\n\nRun ID: ${data.runId || '–'}\nAcompanhe o painel "Ações em Curso" ao lado. Os leads aparecerão na Pré-Lista automaticamente.`
+        : `⚠️ Erro ao iniciar missão: ${data.error || 'resposta inválida do servidor'}`;
+      _agPushMsg('ag1', 'agent', confirm);
+    } catch(e) {
+      _agPushMsg('ag1', 'agent', '⚠️ Falha na conexão com o servidor. Verifique sua internet e tente novamente.');
+    }
+    _agRenderMsgs();
+  } else {
+    _agPushMsg(_agSelected, 'agent', `Agente ainda não está ativo. Apenas o Agente 1 · Caçador está operacional no momento.`);
+    _agRenderMsgs();
+  }
+}
+
+// ── Polling de status (GET /api/agent-status a cada 6s) ──────────
+async function _agPoll() {
+  if (currentPage !== 'agentes') return;
+  try {
+    const r = await fetch('/api/agent-status');
+    const d = await r.json();
+    if (d.agents) {
+      _agStatusData = {};
+      d.agents.forEach(a => { _agStatusData[a.agent] = a; });
+      _agRenderList();
+      _agRenderHeader();
+      _agRenderOps();
+
+      // Atualiza badge se ag1 está ativo
+      const ag1 = _agStatusData['ag1'];
+      const badge = document.getElementById('nb-agentes');
+      if (badge) {
+        if (ag1 && (ag1.status === 'minerando' || ag1.status === 'analisando')) {
+          badge.style.display = '';
+          badge.style.background = '#2E7D32';
+          badge.style.color = '#fff';
+          badge.textContent = '●';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    }
+  } catch {}
+}
+
+// ── Entry-point chamado pelo setPage('agentes') ───────────────────
+function renderAgentes() {
+  _agRenderList();
+  _agRenderHeader();
+  _agRenderMsgs();
+  _agRenderOps();
+  clearInterval(_agPollTimer);
+  _agPoll();
+  _agPollTimer = setInterval(() => { if (currentPage === 'agentes') _agPoll(); else clearInterval(_agPollTimer); }, 6000);
+}
+
 </script>
 <script src="sync.js"></script>
 </body>
