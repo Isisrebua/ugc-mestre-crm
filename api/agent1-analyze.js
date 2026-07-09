@@ -80,11 +80,29 @@ Marca com anúncios ativos usando apenas artes estáticas frias ou vídeos insti
 
 POT: "baixo" — Lead sem budget evidente, sem anúncios ativos, perfil pessoal ou microempreendedor inicial.
 
-━━━ REGRA DE OURO PARA AGÊNCIAS ━━━
-Se o lead for uma agência de marketing, defina a vertente assim:
-- Agência GRANDE/estruturada com equipe interna → ofertar CONTEÚDO UGC (volume de criativos para o tráfego dos clientes deles).
-- Agência BOUTIQUE/dono-gestor sobrecarregado → ofertar GESTÃO DE CAMPANHAS (alívio operacional, sem precisar gerir creators no WhatsApp).
-- Dor universal de agência: churn por ROAS baixo e criativo que satura rápido.
+━━━ PROTOCOLO DINÂMICO PARA AGÊNCIAS DE MARKETING ━━━
+Se o lead for uma agência, NÃO classifique apenas pelo tamanho. Avalie a MATURIDADE DE UGC da agência e enquadre em um dos 3 cenários abaixo:
+
+CENÁRIO AG-1 — AGÊNCIA QUE NÃO USA UGC (POT: "medio"):
+Sinais: anúncios dos clientes são 100% estáticos (artes Canva, vídeos institucionais frios) ou a agência sequer roda campanhas com rostos humanos.
+→ Pode ser grande ou pequena — o tamanho não importa, a maturidade sim.
+→ Gargalo: ROAS fraco por ausência de humanização; clientes churnam por falta de resultado.
+→ Vertente: AMBAS — ofertar Conteúdo UGC E Gestão como braço parceiro estratégico.
+→ Insight de conexão: "Seus clientes estão perdendo dinheiro em anúncios que parecem propaganda de TV dos anos 90. Eu entro como o braço de UGC que você ainda não tem."
+
+CENÁRIO AG-2 — AGÊNCIA QUE USA UGC AMADORISTA (POT: "alto"):
+Sinais: já tentou UGC, mas contrata criadoras avulsas sem estratégia de funil, os criativos saturam em 2–3 semanas, briefings são feitos no improviso, prazos descumpridos no WhatsApp.
+→ Gargalo: caos operacional e criativo sem método — o resultado existe mas é inconsistente.
+→ Vertente: GESTÃO DE CAMPANHAS (Manager de Elite) — assume o braço operacional e estratégico.
+→ Insight de conexão: "Você já acredita no UGC, mas está gerindo no modo hard. Eu estruturo o processo para você escalar sem o desgaste."
+
+CENÁRIO AG-3 — AGÊNCIA ESTRUTURADA COM TETO CRIATIVO (POT: "alto"):
+Sinais: volume alto de criativos, equipe interna de tráfego, mas criativos fadigam rápido (vida útil < 2 semanas), dificuldade de testar novos ganchos em escala, sobrecarga interna com dezenas de briefings e contratos de creators.
+→ Gargalo: fadiga criativa acelerada e sobrecarga operacional que trava o crescimento dos clientes.
+→ Vertente: CONTEÚDO UGC lapidado em escala OU GESTÃO (Manager de Elite para aliviar equipe interna).
+→ Insight de conexão: "Você tem o motor. Eu sou o combustível — conteúdo novo e ganchos validados para manter o tráfego escalando sem saturar."
+
+Dor universal de qualquer agência: churn de clientes por ROAS baixo e criativo que satura rápido. Sempre mencione isso no garg ou insight.
 
 ━━━ FILTROS OBRIGATÓRIOS ━━━
 - DESCARTAR perfis em português de Portugal, espanhol ou inglês. Apenas leads do Brasil (BR).
